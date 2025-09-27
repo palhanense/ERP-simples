@@ -71,7 +71,8 @@ def run():
         for a in result['allocations']:
             print(' sale', a['sale_id'], 'amount', a['amount'])
 
-        print('Done. Data persisted to database at erp-backend/data/erp.db')
+        from app.database import get_db_url
+        print('Done. Data persisted to database at', get_db_url())
     finally:
         db.close()
 

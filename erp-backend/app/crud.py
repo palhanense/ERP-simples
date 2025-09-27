@@ -230,9 +230,6 @@ def get_customer(db: Session, customer_id: int) -> Optional[models.Customer]:
     return db.get(models.Customer, customer_id)
 
 
-def get_customer_by_document(db: Session, document: str) -> Optional[models.Customer]:
-    return db.query(models.Customer).filter(models.Customer.document == document).first()
-
 
 def get_customer_by_phone(db: Session, phone: str) -> Optional[models.Customer]:
     if not phone:

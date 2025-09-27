@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: erp
+      POSTGRES_PASSWORD: "Eme02287523375"
+      POSTGRES_DB: erp
+    volumes:
+      - erp-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ./erp-backend
+    environment:
+      DATABASE_URL: "postgresql+psycopg://erp:Eme02287523375@db:5432/erp"
+      MEDIA_ROOT: "/app/data/product_photos"
+    depends_on:
+      - db
+    volumes:
+      - ./erp-backend:/app:rw
+      - ./erp-backend/data:/app/data:rw
+    ports:
+      - "8000:8000"
+    command: ["/app/docker-entrypoint.sh"]
+
+volumes:
+  erp-db-data:

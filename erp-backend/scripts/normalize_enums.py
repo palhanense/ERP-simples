@@ -1,12 +1,11 @@
 import sqlite3
-from pathlib import Path
+from app.database import get_sqlite_path
 
-DB = Path('data/erp.db')
-if not DB.exists():
-    print('db not found:', DB)
-    raise SystemExit(1)
+sqlite_path = get_sqlite_path()
+if sqlite_path is None:
+    raise SystemExit('This script expects a local sqlite DB; run enum normalization differently for Postgres')
 
-conn = sqlite3.connect(DB)
+conn = sqlite3.connect(str(sqlite_path))
 cur = conn.cursor()
 
 updates = []

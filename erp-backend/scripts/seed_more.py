@@ -53,7 +53,6 @@ def ensure_customers(db: Session) -> list[models.Customer]:
     for i in range(start, TARGET + 1):
         payload = {
             "name": f"Cliente Seed {i}",
-            "document": f"{random.randint(10000000000, 99999999999)}",
             "email": f"cliente{i}@example.com",
             "phone": PHONE_BASE.format(random.randint(1000, 9999), random.randint(1000, 9999)),
             "notes": "Seeded customer",

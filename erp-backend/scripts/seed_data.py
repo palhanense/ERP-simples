@@ -62,21 +62,18 @@ PRODUCTS = [
 CUSTOMERS = [
     {
         "name": "Ana Paula",
-        "document": "12345678900",
         "email": "ana@example.com",
         "phone": "+55 11 98888-1111",
         "notes": "Cliente recorrente",
     },
     {
         "name": "Carlos Lima",
-        "document": "98765432100",
         "email": "carlos@example.com",
         "phone": "+55 11 97777-2222",
         "notes": "Prefere pagamento em cartao",
     },
     {
         "name": "Loja Dona Rosa",
-        "document": "12345678000199",
         "email": "contato@donarosa.com",
         "phone": "+55 11 3666-1234",
         "notes": "Cliente atacado",

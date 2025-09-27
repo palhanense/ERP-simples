@@ -166,11 +166,7 @@ def delete_product_photo(
 def create_customer(
     customer: schemas.CustomerCreate, db: Session = Depends(get_db)
 ) -> schemas.Customer:
-    if customer.document and crud.get_customer_by_document(db, customer.document):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Document already registered",
-        )
+    # 'document' field removed from Customer model; skip document uniqueness check.
     # Prevent duplicate by phone
     if customer.phone and crud.get_customer_by_phone(db, customer.phone):
         raise HTTPException(
@@ -206,14 +202,7 @@ def update_customer(
     db_customer = crud.get_customer(db, customer_id)
     if not db_customer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
-
-    if customer_update.document and customer_update.document != db_customer.document:
-        existing = crud.get_customer_by_document(db, customer_update.document)
-        if existing and existing.id != customer_id:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Document already registered",
-            )
+    # 'document' field removed from Customer model; no document uniqueness check.
 
     return crud.update_customer(db, db_customer, customer_update)
 

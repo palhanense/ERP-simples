@@ -754,10 +754,9 @@ function CustomerStep({
         <div className="rounded-3xl border border-neutral-200 px-5 py-4 text-sm text-neutral-600 dark:border-white/20 dark:text-neutral-200">
           <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">Cliente selecionado</p>
           <p className="mt-2 text-lg font-semibold">{selectedCustomer.name}</p>
-          <div className="mt-3 grid gap-2 md:grid-cols-3">
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
             <span>Telefone: {selectedCustomer.phone || "-"}</span>
             <span>Email: {selectedCustomer.email || "-"}</span>
-            <span>Documento: {selectedCustomer.document || "-"}</span>
           </div>
         </div>
       )}

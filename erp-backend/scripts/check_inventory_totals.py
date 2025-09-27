@@ -1,6 +1,10 @@
 import sqlite3
 from decimal import Decimal
-p=r'C:/Users/abmme/OneDrive/Desktop/ERP sistema/erp-backend/data/erp.db'
+from app.database import get_sqlite_path
+sqlite_path = get_sqlite_path()
+if sqlite_path is None:
+    raise SystemExit('This script expects a local sqlite DB; set DATABASE_URL to a sqlite path or run equivalent checks against Postgres')
+p = str(sqlite_path)
 conn=sqlite3.connect(p)
 conn.row_factory = sqlite3.Row
 cur=conn.cursor()

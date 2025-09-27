@@ -3,9 +3,16 @@ from decimal import Decimal
 import json
 import urllib.request
 
+from pathlib import Path
+from app.database import get_sqlite_path
+
 DB_PATH = r'C:/Users/abmme/OneDrive/Desktop/ERP sistema/erp-backend/data/erp.db'
 BACKFILL_VALUE = 10
 
+sqlite_path = get_sqlite_path()
+if sqlite_path is None:
+    raise SystemExit('This script expects a local sqlite DB; run backfill against Postgres differently')
+DB_PATH = str(sqlite_path)
 conn = sqlite3.connect(DB_PATH)
 cur = conn.cursor()
 # apply backfill where stock is NULL or 0

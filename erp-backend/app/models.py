@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Dict, List
 
 from sqlalchemy import DateTime, Enum as SqlEnum, ForeignKey, Integer, Numeric, String, func
-from sqlalchemy.dialects.sqlite import JSON
+from sqlalchemy import JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -18,6 +18,7 @@ class Product(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     sku: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
     category: Mapped[str] = mapped_column(String(100), nullable=False)
+    supplier: Mapped[str | None] = mapped_column(String(255), nullable=True)
     cost_price: Mapped[Numeric] = mapped_column(Numeric(10, 2), nullable=False)
     sale_price: Mapped[Numeric] = mapped_column(Numeric(10, 2), nullable=False)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

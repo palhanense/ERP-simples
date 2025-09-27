@@ -1,8 +1,16 @@
+from pathlib import Path
+from app.database import get_sqlite_path
+
+sqlite_path = get_sqlite_path()
+if sqlite_path is None:
+    raise SystemExit('This script expects a local sqlite DB; run equivalent checks against Postgres')
+DB = str(sqlite_path)
+
 import sqlite3
 import json
 import sys
 
-DB = 'data/erp.db'
+DB = str(sqlite_path)
 
 try:
     conn = sqlite3.connect(DB)
