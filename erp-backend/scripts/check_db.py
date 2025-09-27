@@ -1,3 +1,9 @@
+"""
+Este script foi escrito para operar sobre o banco SQLite local (`data/erp.db`).
+Em ambientes que usam Postgres, prefira rodar verificações equivalentes via queries
+no banco Postgres ou adaptar o script para usar SQLAlchemy/psycopg.
+"""
+
 from pathlib import Path
 from app.database import get_sqlite_path
 

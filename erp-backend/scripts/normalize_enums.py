@@ -1,3 +1,9 @@
+"""
+Script específico para normalizar enums em um banco SQLite local (`data/erp.db`).
+Em produção com Postgres, adapte este script para usar SQLAlchemy/psycopg
+ou execute queries equivalentes diretamente no Postgres.
+"""
+
 import sqlite3
 from app.database import get_sqlite_path
 

@@ -1,3 +1,8 @@
+"""
+Script para adicionar/retrocompatibilizar a coluna `stock` em um banco SQLite local.
+Para Postgres, aplique mudanças de esquema via Alembic e rode backfills usando SQLAlchemy.
+"""
+
 import sqlite3
 import json
 from app.database import get_sqlite_path

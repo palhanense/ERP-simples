@@ -1,10 +1,8 @@
-"""Migrate data from the local SQLite `data/erp.db` to a Postgres database.
+"""
+Migra dados do SQLite local (`data/erp.db`) para um banco Postgres.
 
-Usage:
-  python migrate_sqlite_to_postgres.py --sqlite sqlite:///./data/erp.db --postgres "postgresql+psycopg://user:pass@host:5432/db"
-
-This script uses the project's SQLAlchemy models to perform row-by-row copy.
-It is intentionally conservative and logs progress; test on a copy first.
+ATENÇÃO: este script é sensível ao esquema. Teste em cópias de dados antes de
+usar em produção. Para a maioria das alterações de esquema, prefira Alembic.
 """
 import argparse
 import logging
