@@ -1,0 +1,1 @@
+## Arquivo vazio. Todas as referências a Flask removidas. FastAPI é usado no projeto.

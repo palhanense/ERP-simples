@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "Montserrat", sans-serif;
+}
+
+body {
+  @apply bg-surface-light text-text-light transition-colors duration-300 ease-out;
+}
+
+a {
+  @apply text-text-light underline-offset-4;
+}
+
+.dark body {
+  @apply bg-surface-dark text-text-dark;
+}

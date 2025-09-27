@@ -1,0 +1,58 @@
+INFO:     127.0.0.1:52426 - "OPTIONS /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52427 - "OPTIONS /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52428 - "OPTIONS /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52431 - "OPTIONS /customers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52429 - "OPTIONS /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52430 - "OPTIONS /products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52426 - "OPTIONS /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52427 - "OPTIONS /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52428 - "OPTIONS /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52431 - "OPTIONS /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52429 - "OPTIONS /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52426 - "OPTIONS /products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52430 - "OPTIONS /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52428 - "OPTIONS /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52427 - "OPTIONS /customers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52431 - "OPTIONS /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52430 - "GET /customers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52428 - "GET /products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52426 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52431 - "GET /customers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52428 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52430 - "GET /products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52429 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52431 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52429 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52431 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52430 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52429 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52431 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52429 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52431 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52429 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52434 - "GET /media/products/product-1-a8b223b49f8c42baaacbbbbcf29501ad.webp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52484 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52483 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52484 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52484 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52483 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52484 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52483 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52484 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52484 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52483 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52484 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52483 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52488 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52484 - "GET /financial-entries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52483 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52484 - "GET /sales HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52877 - "GET /products/report HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:52895 - "GET /products/report HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:52916 - "GET /reports/products HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52916 - "GET /reports/products HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52916 - "GET /reports/products HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52916 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52926 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52938 - "GET /reports/products HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53052 - "GET /reports/products HTTP/1.1" 404 Not Found
