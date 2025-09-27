@@ -1,65 +1,60 @@
-import sqlite3
+"""
+Backfill minimal stock values for products and compute totals using
+SQLAlchemy so the script runs against Postgres or SQLite via DATABASE_URL.
+"""
+
 from decimal import Decimal
 import json
 import urllib.request
 
-from pathlib import Path
-from app.database import get_sqlite_path
+from app.database import SessionLocal
+from app import models
 
-DB_PATH = r'C:/Users/abmme/OneDrive/Desktop/ERP sistema/erp-backend/data/erp.db'
 BACKFILL_VALUE = 10
 
-sqlite_path = get_sqlite_path()
-if sqlite_path is None:
-    raise SystemExit('This script expects a local sqlite DB; run backfill against Postgres differently')
-DB_PATH = str(sqlite_path)
-conn = sqlite3.connect(DB_PATH)
-cur = conn.cursor()
-# apply backfill where stock is NULL or 0
-cur.execute("SELECT COUNT(*) FROM products WHERE stock IS NULL OR stock=0")
-to_update = cur.fetchone()[0]
-print('products to update:', to_update)
-if to_update > 0:
-    cur.execute("UPDATE products SET stock=? WHERE stock IS NULL OR stock=0", (BACKFILL_VALUE,))
-    conn.commit()
-    print('updated rows:', to_update)
-else:
-    print('no rows needed update')
-
-# recalc totals
-cur.execute("SELECT id, name, cost_price, sale_price, stock FROM products")
-rows = cur.fetchall()
-from decimal import Decimal
-sum_stock = 0
-total_cost = Decimal('0')
-total_sale = Decimal('0')
-for r in rows:
-    pid, name, cost_price, sale_price, stock = r
-    stock = stock or 0
-    sum_stock += int(stock)
-    total_cost += Decimal(cost_price or 0) * int(stock)
-    total_sale += Decimal(sale_price or 0) * int(stock)
-
-print('--- after backfill ---')
-print('sum_stock=', sum_stock)
-print('total_cost=', float(total_cost))
-print('total_sale=', float(total_sale))
-print('sample products:')
-for r in rows[:5]:
-    print(r)
-
-# try calling backend endpoint
+session = SessionLocal()
 try:
-    url = 'http://127.0.0.1:8000/reports/products?limit=500'
-    print('\ncalling', url)
-    resp = urllib.request.urlopen(url, timeout=5)
-    data = resp.read().decode('utf-8')
-    try:
-        j = json.loads(data)
-        print('endpoint totals:', j.get('totals'))
-    except Exception as e:
-        print('failed to parse JSON from endpoint:', e)
-except Exception as e:
-    print('HTTP call failed:', e)
+    # count products needing backfill
+    to_update = session.query(models.Product).filter((models.Product.stock == None) | (models.Product.stock == 0)).count()
+    print('products to update:', to_update)
+    if to_update > 0:
+        session.query(models.Product).filter((models.Product.stock == None) | (models.Product.stock == 0)).update({models.Product.stock: BACKFILL_VALUE}, synchronize_session=False)
+        session.commit()
+        print('updated rows:', to_update)
+    else:
+        print('no rows needed update')
 
-conn.close()
+    # recalc totals
+    rows = session.query(models.Product.id, models.Product.name, models.Product.cost_price, models.Product.sale_price, models.Product.stock).all()
+    sum_stock = 0
+    total_cost = Decimal('0')
+    total_sale = Decimal('0')
+    for pid, name, cost_price, sale_price, stock in rows:
+        stock = stock or 0
+        sum_stock += int(stock)
+        total_cost += Decimal(cost_price or 0) * int(stock)
+        total_sale += Decimal(sale_price or 0) * int(stock)
+
+    print('--- after backfill ---')
+    print('sum_stock=', sum_stock)
+    print('total_cost=', float(total_cost))
+    print('total_sale=', float(total_sale))
+    print('sample products:')
+    for r in rows[:5]:
+        print(r)
+
+    # try calling backend endpoint
+    try:
+        url = 'http://127.0.0.1:8000/reports/products?limit=500'
+        print('\ncalling', url)
+        resp = urllib.request.urlopen(url, timeout=5)
+        data = resp.read().decode('utf-8')
+        try:
+            j = json.loads(data)
+            print('endpoint totals:', j.get('totals'))
+        except Exception as e:
+            print('failed to parse JSON from endpoint:', e)
+    except Exception as e:
+        print('HTTP call failed:', e)
+finally:
+    session.close()

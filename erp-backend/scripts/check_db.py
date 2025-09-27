@@ -1,41 +1,32 @@
 """
-Este script foi escrito para operar sobre o banco SQLite local (`data/erp.db`).
-Em ambientes que usam Postgres, prefira rodar verificações equivalentes via queries
-no banco Postgres ou adaptar o script para usar SQLAlchemy/psycopg.
+Script para checar tabelas no banco de dados usando SQLAlchemy.
+Funciona tanto com SQLite local quanto com Postgres quando o app estiver
+configurado com `DATABASE_URL`. Retorna contagens e até 3 linhas de amostra
+por tabela.
 """
 
-from pathlib import Path
-from app.database import get_sqlite_path
-
-sqlite_path = get_sqlite_path()
-if sqlite_path is None:
-    raise SystemExit('This script expects a local sqlite DB; run equivalent checks against Postgres')
-DB = str(sqlite_path)
-
-import sqlite3
 import json
-import sys
+from app.database import SessionLocal, get_sqlite_path
+from app import models
 
-DB = str(sqlite_path)
-
+session = SessionLocal()
 try:
-    conn = sqlite3.connect(DB)
-except Exception as e:
-    print(json.dumps({'error': f'could not open db: {e}'}))
-    sys.exit(1)
+    result = {}
+    tables = [models.Product, models.Customer, models.Sale, models.FinancialEntry]
+    for M in tables:
+        name = M.__tablename__
+        try:
+            count = session.query(M).count()
+            rows = session.query(M).limit(3).all()
+            # serialize simple attrs (avoid ORM internals)
+            serialized = []
+            for r in rows:
+                d = {k: getattr(r, k) for k in r.__dict__ if not k.startswith('_sa_')}
+                serialized.append(d)
+            result[name] = {'count': count, 'rows': serialized}
+        except Exception as e:
+            result[name] = {'error': str(e)}
 
-cur = conn.cursor()
-result = {}
-tables = ['products', 'customers', 'sales', 'financial_entries']
-for t in tables:
-    try:
-        cur.execute(f"SELECT COUNT(*) FROM {t}")
-        c = cur.fetchone()[0]
-        cur.execute(f"SELECT * FROM {t} LIMIT 3")
-        rows = cur.fetchall()
-        # convert rows to lists for JSON
-        result[t] = {'count': c, 'rows': [list(r) for r in rows]}
-    except Exception as e:
-        result[t] = {'error': str(e)}
-
-print(json.dumps(result, ensure_ascii=False, indent=2))
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+finally:
+    session.close()

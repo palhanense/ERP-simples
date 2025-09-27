@@ -1,53 +1,45 @@
 """
-Script específico para normalizar enums em um banco SQLite local (`data/erp.db`).
-Em produção com Postgres, adapte este script para usar SQLAlchemy/psycopg
-ou execute queries equivalentes diretamente no Postgres.
+Normaliza valores de enums (status/method/type) usando SQLAlchemy.
+Isso funciona contra Postgres ou SQLite conforme `DATABASE_URL`.
 """
 
-import sqlite3
-from app.database import get_sqlite_path
+from app.database import SessionLocal
+from app import models
 
-sqlite_path = get_sqlite_path()
-if sqlite_path is None:
-    raise SystemExit('This script expects a local sqlite DB; run enum normalization differently for Postgres')
-
-conn = sqlite3.connect(str(sqlite_path))
-cur = conn.cursor()
-
+session = SessionLocal()
 updates = []
-# normalize sales.status
-cur.execute("SELECT DISTINCT status FROM sales")
-rows = [r[0] for r in cur.fetchall()]
-for s in rows:
-    if s is None:
-        continue
-    lower = s.lower()
-    if s != lower:
-        updates.append((s, lower))
-        cur.execute("UPDATE sales SET status = ? WHERE status = ?", (lower, s))
+try:
+    # sales.status
+    statuses = {r[0] for r in session.query(models.Sale.status).distinct()}
+    for s in statuses:
+        if s is None:
+            continue
+        lower = s.lower()
+        if s != lower:
+            updates.append((s, lower))
+            session.query(models.Sale).filter(models.Sale.status == s).update({models.Sale.status: lower}, synchronize_session=False)
 
-# normalize sale_payments.method
-cur.execute("SELECT DISTINCT method FROM sale_payments")
-rows = [r[0] for r in cur.fetchall()]
-for m in rows:
-    if m is None:
-        continue
-    lower = m.lower()
-    if m != lower:
-        updates.append((m, lower))
-        cur.execute("UPDATE sale_payments SET method = ? WHERE method = ?", (lower, m))
+    # sale_payments.method
+    methods = {r[0] for r in session.query(models.SalePayment.method).distinct()}
+    for m in methods:
+        if m is None:
+            continue
+        lower = m.lower()
+        if m != lower:
+            updates.append((m, lower))
+            session.query(models.SalePayment).filter(models.SalePayment.method == m).update({models.SalePayment.method: lower}, synchronize_session=False)
 
-# normalize financial_entries.type
-cur.execute("SELECT DISTINCT type FROM financial_entries")
-rows = [r[0] for r in cur.fetchall()]
-for t in rows:
-    if t is None:
-        continue
-    lower = t.lower()
-    if t != lower:
-        updates.append((t, lower))
-        cur.execute("UPDATE financial_entries SET type = ? WHERE type = ?", (lower, t))
+    # financial_entries.type
+    types = {r[0] for r in session.query(models.FinancialEntry.type).distinct()}
+    for t in types:
+        if t is None:
+            continue
+        lower = t.lower()
+        if t != lower:
+            updates.append((t, lower))
+            session.query(models.FinancialEntry).filter(models.FinancialEntry.type == t).update({models.FinancialEntry.type: lower}, synchronize_session=False)
 
-conn.commit()
-print('normalized:', updates)
-conn.close()
+    session.commit()
+    print('normalized:', updates)
+finally:
+    session.close()
