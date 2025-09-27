@@ -1,0 +1,8 @@
+﻿# Ignore local Python and node environments
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+# Ignore local SQLite DB used during development
+erp-backend/data/erp.db
+
