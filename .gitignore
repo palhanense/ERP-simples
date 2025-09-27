@@ -5,4 +5,7 @@ __pycache__/
 node_modules/
 # Ignore local SQLite DB used during development
 erp-backend/data/erp.db
+# Ignore backend virtual environment
+erp-backend/venv/
+erp-backend/.venv/
 
