@@ -1,8 +1,6 @@
-# ERP Backend
+# Menju Backend
 
-# ERP Backend
-
-API em FastAPI para gerenciar produtos, clientes, vendas e financeiro.
+API em FastAPI para gerenciar produtos, clientes, vendas e financeiro como parte do projeto Menju.
 
 ## Requisitos
 
@@ -25,9 +23,14 @@ Configure a variável de ambiente `DATABASE_URL` para o Postgres, por exemplo:
 DATABASE_URL=postgresql+psycopg://erp:senha@localhost:5432/erp
 ```
 
-Inicie o servidor:
+No desenvolvimento local sem Docker, inicie o servidor:
 ```powershell
 uvicorn app.main:app --reload
+```
+
+Se estiver usando Docker Compose (recomendado), suba os serviços na raiz do projeto:
+```powershell
+docker compose up --build
 ```
 
 A documentação interativa estará em [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
@@ -39,9 +42,15 @@ Para popular o banco com dados de teste:
 .venv\Scripts\python.exe scripts\seed_data.py
 ```
 
+Quando usando Docker Compose, rode o seed dentro do container backend ou adapte o script para ser executado automaticamente durante o startup de desenvolvimento.
+
 ## Estrutura
 
-- **Produtos**: nome, sku, categoria, fornecedor, custo, preço, estoque, fotos, atributos extras.
-- **Clientes**: nome, email, telefone, observações.
-- **Vendas**: itens, múltiplas formas de pagamento, cancelamento.
-- **Financeiro**: entradas/saídas, categorias, controle de caixa.
+-- **Produtos**: nome, sku, categoria, fornecedor, custo, preço, estoque, fotos, atributos extras.
+-- **Clientes**: nome, email, telefone, observações.
+-- **Vendas**: itens, múltiplas formas de pagamento, cancelamento.
+-- **Financeiro**: entradas/saídas, categorias, controle de caixa.
+
+Observações
+- Autenticação: será revisada e um scaffold JWT será adicionado para suportar multi-tenant e usuários.
+- Migrações: Alembic está presente no projeto; use `alembic upgrade head` para aplicar migrações.

@@ -1,7 +1,7 @@
 
 # Menju (Frontend + Backend)
 
-Este repositório contém a interface web (frontend) e a API (backend) do Menju — sistema para gestão de produtos, clientes, vendas e financeiro.
+Este repositório contém a interface web (frontend) e a API (backend) do Menju — um sistema simples para gestão de produtos, clientes, vendas e financeiro. O projeto é composto por um backend em Python/FastAPI e um frontend em React (Vite + Tailwind). O repositório inclui uma configuração `docker-compose` para facilitar o desenvolvimento completo (banco, backend e frontend).
 
 ## Requisitos
 
@@ -16,7 +16,7 @@ Este repositório contém a interface web (frontend) e a API (backend) do Menju 
 
 1. Na raiz do projeto, execute:
 	```powershell
-	docker-compose up --build
+	docker compose up --build
 	```
 	Isso irá subir o banco Postgres, o backend FastAPI e o frontend React.
 
@@ -48,26 +48,33 @@ Este repositório contém a interface web (frontend) e a API (backend) do Menju 
 	cd erp-frontend
 	npm install
 	```
-2. (Opcional) Crie um arquivo `.env` com a URL da API:
+2. (Opcional) Crie um arquivo `.env` com a URL da API (quando rodando localmente sem Docker):
 	```
 	VITE_API_URL=http://127.0.0.1:8000
 	```
-3. Inicie o frontend:
+	Quando usando Docker Compose, o frontend container já está configurado para apontar para o serviço backend.
+3. Inicie o frontend (quando não usar Docker):
 	```powershell
 	npm run dev -- --host
 	```
 
 ## Seed / Popular banco de dados
 
-Execute o script de seed para popular o banco Postgres com dados de exemplo:
+Execute o script de seed para popular o banco Postgres com dados de exemplo (quando estiver usando um ambiente Python local):
 ```powershell
 cd erp-backend
 .venv\Scripts\python.exe scripts\seed_data.py
 ```
 
+Quando usando Docker Compose, prefira rodar comandos dentro do container backend ou preparar um script de seed que execute no startup.
+
 ## Estrutura do projeto
 
 - `erp-backend/` — API FastAPI, SQLAlchemy, scripts e banco Postgres.
 - `erp-frontend/` — App React + Vite + Tailwind; componentes em `src/components`, client API em `src/lib/api.js`.
+
+Observações rápidas
+- Autenticação/Autorização: o scaffold inicial será implementado em breve (JWT + endpoints /auth). Atualmente o projeto não possui login — planeje autenticação para ambientes multi-tenant.
+- CORS e variáveis de ambiente: verifique `erp-frontend/.env` e `erp-backend/app/main.py` para controlar origens permitidas em desenvolvimento.
 
 ---
