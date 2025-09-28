@@ -165,6 +165,31 @@ def list_products_report(
     }
 
 
+# Tenancy / User helpers
+def create_tenant(db: Session, name: str, slug: str) -> models.Tenant:
+    t = models.Tenant(name=name, slug=slug)
+    db.add(t)
+    db.commit()
+    db.refresh(t)
+    return t
+
+
+def create_user(db: Session, email: str, password_hash: str, tenant_id: int, full_name: str | None = None, role: models.UserRole = models.UserRole.USER) -> models.User:
+    u = models.User(email=email, password_hash=password_hash, tenant_id=tenant_id, full_name=full_name, role=role)
+    db.add(u)
+    db.commit()
+    db.refresh(u)
+    return u
+
+
+def get_user_by_email(db: Session, email: str) -> models.User | None:
+    return db.query(models.User).filter(models.User.email == email).first()
+
+
+def get_user(db: Session, user_id: int) -> models.User | None:
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+
 def get_product(db: Session, product_id: int) -> Optional[models.Product]:
     return db.query(models.Product).filter(models.Product.id == product_id).first()
 

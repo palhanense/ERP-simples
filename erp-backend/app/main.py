@@ -15,6 +15,9 @@ from app.services.image_processing import (
     ImageProcessingError,
     convert_many_to_webp,
 )
+from app.auth import verify_password, create_access_token, decode_access_token
+from sqlalchemy.orm import Session
+from fastapi import Depends, Header
 
 app = FastAPI(title="Menju Backend", version="0.2.0")
 app.mount("/media/products", StaticFiles(directory=MEDIA_ROOT), name="product-media")
@@ -77,6 +80,37 @@ def read_products_report(
         "total_sale": float(totals["total_sale"]),
     }
     return {"products": report["products"], "totals": totals_serial}
+
+
+# --- Authentication endpoints (basic JWT) ---
+@app.post("/auth/token", response_model=schemas.Token)
+def login_for_access_token(form_data: dict, db: Session = Depends(get_db)):
+    # form_data expected to contain 'username' and 'password'
+    username = form_data.get("username")
+    password = form_data.get("password")
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="username and password required")
+    user = crud.get_user_by_email(db, username)
+    if not user or not verify_password(password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_access_token({"sub": str(user.id), "tenant_id": user.tenant_id})
+    return {"access_token": token, "token_type": "bearer"}
+
+
+@app.get("/auth/me")
+def read_current_user(authorization: str | None = Header(None), db: Session = Depends(get_db)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing authorization header")
+    try:
+        scheme, token = authorization.split()
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid authorization header")
+    payload = decode_access_token(token)
+    user_id = int(payload.get("sub"))
+    user = crud.get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 
 @app.get("/products/{product_id}", response_model=schemas.Product)

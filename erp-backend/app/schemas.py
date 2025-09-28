@@ -40,6 +40,23 @@ class ProductUpdate(BaseModel):
     extra_attributes: Optional[Dict[str, List[str]]] = None
 
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    sub: int | None = None
+    tenant_id: int | None = None
+
+
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    full_name: Optional[str] = None
+    tenant_id: Optional[int] = None
+
+
 class Product(ProductBase):
     id: int
     created_at: datetime
