@@ -57,6 +57,32 @@ class UserCreate(BaseModel):
     tenant_id: Optional[int] = None
 
 
+class TenantCreate(BaseModel):
+    name: str
+    slug: str
+
+
+class Tenant(BaseModel):
+    id: int
+    name: str
+    slug: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class User(BaseModel):
+    id: int
+    tenant_id: int
+    email: str
+    full_name: Optional[str] = None
+    role: str
+    is_active: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class Product(ProductBase):
     id: int
     created_at: datetime

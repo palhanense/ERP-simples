@@ -97,6 +97,38 @@ def login_for_access_token(form_data: dict, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer"}
 
 
+# Admin endpoints for tenant/user creation (dev)
+@app.post("/tenants", response_model=schemas.Tenant, status_code=status.HTTP_201_CREATED)
+def create_tenant_endpoint(payload: dict, db: Session = Depends(get_db)):
+    name = payload.get("name")
+    slug = payload.get("slug")
+    if not name or not slug:
+        raise HTTPException(status_code=400, detail="name and slug required")
+    try:
+        t = crud.create_tenant(db, name=name, slug=slug)
+    except Exception as exc:
+        # assume uniqueness conflict
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return t
+
+
+@app.post("/users", response_model=schemas.User, status_code=status.HTTP_201_CREATED)
+def create_user_endpoint(payload: dict, db: Session = Depends(get_db)):
+    email = payload.get("email")
+    password = payload.get("password")
+    tenant_id = payload.get("tenant_id")
+    full_name = payload.get("full_name")
+    role = payload.get("role") or "user"
+    if not email or not password or not tenant_id:
+        raise HTTPException(status_code=400, detail="email, password and tenant_id required")
+    pwd_hash = get_password_hash(password)
+    try:
+        u = crud.create_user(db, email=email, password_hash=pwd_hash, tenant_id=tenant_id, full_name=full_name, role=crud.models.UserRole(role))
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return u
+
+
 @app.get("/auth/me")
 def read_current_user(authorization: str | None = Header(None), db: Session = Depends(get_db)):
     if not authorization:
