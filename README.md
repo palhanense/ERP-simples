@@ -193,20 +193,3 @@ pytest -q
 ```powershell
 pip install -r erp-backend/requirements-dev.txt
 ```
-
----
-
-## Boas práticas e próximos passos
-
-- Trabalhe em branches curtos e abra PRs para revisão.
-- Considere adicionar CI que rode `pytest` no PR.
-
----
-
-Se quiser, posso:
-
-- Ajustar `.vscode/settings.json` para apontar para `.venv`.
-- Criar um workflow de CI que instale dependências e rode `pytest`.
-- Rodar os testes localmente e reportar os resultados.
-
-Escolha o próximo passo e eu executo.
