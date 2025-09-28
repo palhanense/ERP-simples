@@ -98,7 +98,7 @@ export default function FiadoView({ sales = [], customers = [], onPaymentSaved }
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Fiado</h2>
         <div className="flex gap-2 items-center">
-          <label className="text-sm text-neutral-400">Período</label>
+          <label className="text-lg text-black dark:text-white font-semibold">Período</label>
           <DateRange from={from} to={to} onChange={(v) => { if (v.from) setFrom(v.from); if (v.to) setTo(v.to); }} />
           <button
             onClick={() => setShowPaymentModal(true)}
@@ -111,11 +111,11 @@ export default function FiadoView({ sales = [], customers = [], onPaymentSaved }
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 flex items-baseline justify-between dark:border-white/10 dark:bg-surface-dark">
-          <div className="text-sm text-neutral-400 font-medium">Total</div>
+          <div className="text-lg text-black dark:text-white font-semibold">Total</div>
           <div className="text-2xl font-semibold">{formatCurrency(allFiadoTotal)}</div>
         </div>
         <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 flex items-baseline justify-between dark:border-white/10 dark:bg-surface-dark">
-          <div className="text-sm text-neutral-400 font-medium">Período</div>
+          <div className="text-lg text-black dark:text-white font-semibold">Período</div>
           <div className="text-2xl font-semibold">{formatCurrency(periodFiadoTotal)}</div>
         </div>
       </div>

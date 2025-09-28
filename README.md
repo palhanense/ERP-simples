@@ -1,7 +1,7 @@
 
-# ERP (Frontend + Backend)
+# Menju (Frontend + Backend)
 
-Este repositório contém a interface web (frontend) e a API (backend) do ERP para gestão de produtos, clientes, vendas e financeiro.
+Este repositório contém a interface web (frontend) e a API (backend) do Menju — sistema para gestão de produtos, clientes, vendas e financeiro.
 
 ## Requisitos
 

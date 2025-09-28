@@ -1,3 +1,9 @@
+/* stylelint-disable */
+/*
+  Tailwind at-rules (@tailwind, @apply) are used here. Stylelint
+  and some editors may not recognize them without the Tailwind
+  plugin; disable stylelint for this file.
+*/
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,4 +22,23 @@ a {
 
 .dark body {
   @apply bg-surface-dark text-text-dark;
-}
+}
+
+/* Ajustes visuais para inputs de data: remover acento azul padrão e usar tons neutros quando suportado pelo navegador */
+input[type="date"], input[type="date"]::-webkit-calendar-picker-indicator {
+  /* browsers modernos suportam accent-color */
+  accent-color: #9CA3AF; /* cinza neutro */
+}
+
+/* Remover anel de foco azul em navegadores WebKit para o indicador */
+input[type="date"]:focus, input[type="date"]::-webkit-calendar-picker-indicator:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Quando possível, tente forçar a cor de seleção para cinza (funciona em alguns navegadores) */
+input[type="date"]::-webkit-datetime-edit-text, input[type="date"]::-webkit-datetime-edit, input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color: #111827; /* quase preto */
+  background: transparent;
+}
+

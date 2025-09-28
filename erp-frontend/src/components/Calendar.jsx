@@ -29,18 +29,27 @@ export default function Calendar({ value, onChange, min, max, className = '', re
         min={min}
         max={max}
         required={required}
-        className="absolute inset-0 opacity-0"
+        // deixar invisível mas não interceptar cliques — o clique deve atingir o campo visível
+        className="absolute inset-0 opacity-0 pointer-events-none"
         aria-hidden="true"
       />
 
       <input
         type="text"
         role="button"
+        tabIndex={0}
         readOnly
         onClick={handleVisibleClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();
+            handleVisibleClick();
+          }
+        }}
         value={v ? formatDate(v) : ''}
-        className={`${className} pr-8`}
+        className={`${className} pr-8 w-full cursor-pointer focus:outline-none focus:ring-0 focus:shadow-none focus:bg-neutral-100 dark:focus:bg-neutral-800 focus:text-black`}
         placeholder="dd/mm/aaaa"
+        aria-label={v ? formatDate(v) : 'Selecionar data'}
       />
 
       <svg

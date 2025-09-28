@@ -16,7 +16,7 @@ from app.services.image_processing import (
     convert_many_to_webp,
 )
 
-app = FastAPI(title="ERP Backend", version="0.2.0")
+app = FastAPI(title="Menju Backend", version="0.2.0")
 app.mount("/media/products", StaticFiles(directory=MEDIA_ROOT), name="product-media")
 
 app.add_middleware(
@@ -25,6 +25,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:5173",
         "http://0.0.0.0:5173",
+        "http://backend:8000",
     ],
     allow_origin_regex=r"http://(127\.0\.0\.1|0\.0\.0\.0|localhost|10\.\d+\.\d+\.\d+|172\.1[6-9]\.\d+\.\d+|172\.2[0-9]\.\d+\.\d+|172\.3[0-1]\.\d+\.\d+|192\.168\.\d+\.\d+):\d+",
     allow_credentials=True,

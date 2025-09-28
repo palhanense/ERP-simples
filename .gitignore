@@ -9,3 +9,22 @@ erp-backend/data/erp.db
 erp-backend/venv/
 erp-backend/.venv/
 
+# Logs e artefatos
+*.log
+*.zip
+uvicorn.out.log
+uvicorn.err.log
+npm.out.log
+npm-dev.out.log
+npm-dev.err.log
+erp-frontend-npm.log
+erp-frontend.zip
+erp-backend.zip
+
+# Bytecode Python
+*.pyc
+__pycache__/
+erp-backend/scripts/__pycache__/
+erp-backend/alembic/__pycache__/
+erp-backend/alembic/versions/__pycache__/
+

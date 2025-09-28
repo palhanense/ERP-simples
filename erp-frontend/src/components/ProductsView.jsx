@@ -200,19 +200,31 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
           loading && "opacity-70"
         )}
       >
+        <div className="-mx-6 overflow-x-auto px-6">
   {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
-  <table className="w-full table-fixed border-separate border-spacing-y-4">
+  <table className="w-full min-w-[720px] table-fixed border-separate border-spacing-y-2">
+    <colgroup>
+      <col style={{ width: '72px' }} />
+      <col style={{ width: '10%' }} />
+      <col style={{ width: '34%' }} />
+      <col style={{ width: '12%' }} />
+      <col style={{ width: '8%' }} />
+      <col style={{ width: '8%' }} />
+      <col style={{ width: '6%' }} />
+      <col style={{ width: '6%' }} />
+      <col style={{ width: '12%' }} />
+    </colgroup>
     <thead>
       <tr className="text-left text-xs uppercase tracking-[0.25em] text-neutral-400 dark:text-neutral-500">
-    <th className="w-[96px] text-center">Foto</th>
+  <th className="w-[72px] align-middle text-center">Foto</th>
     <th className="w-[10%] border-l border-outline/20 text-center">SKU</th>
-    <th className="w-[28%] border-l border-outline/20 text-center">Produto</th>
-  <th className="w-[12%] border-l border-outline/20 text-center">catego</th>
-  <th className="w-[10%] border-l border-outline/20 text-center">Preço<br/>venda</th>
-  <th className="w-[10%] border-l border-outline/20 text-center">Preço<br/>custo</th>
-  <th className="w-[8%] border-l border-outline/20 text-center">Margem</th>
-  <th className="w-[8%] border-l border-outline/20 text-center">esto-<br/>que</th>
-  <th className="w-[12%] border-l border-outline/20 text-center">ultima<br/>venda</th>
+    <th className="w-[34%] border-l border-outline/20 text-left">Produto</th>
+  <th className="w-[12%] border-l border-outline/20 text-center"><div className="leading-tight text-center">cate<br/>goria</div></th>
+  <th className="w-[8%] border-l border-outline/20 text-center"><div className="leading-tight text-center">Preço<br/>venda</div></th>
+  <th className="w-[8%] border-l border-outline/20 text-center"><div className="leading-tight text-center">Preço<br/>custo</div></th>
+  <th className="w-[6%] border-l border-outline/20 text-center"><div className="leading-tight text-center">Mar<br/>gem</div></th>
+  <th className="w-[6%] border-l border-outline/20 text-center"><div className="leading-tight text-center">esto<br/>que</div></th>
+  <th className="w-[12%] border-l border-outline/20 text-center"><div className="leading-tight text-center">Última<br/>venda</div></th>
       </tr>
     </thead>
     <tbody className="text-sm">
@@ -234,10 +246,10 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
           : Number(product.margin || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         return (
-          <tr key={product.id} onClick={() => handleEdit(product)} className="cursor-pointer">
+          <tr key={product.id} onClick={() => handleEdit(product)} className="cursor-pointer hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
             {/* Foto */}
-            <td className="px-4 py-4 align-middle">
-              <div className="h-20 w-20 overflow-hidden rounded-2xl bg-neutral-100 dark:bg-white/5">
+            <td className="px-3 py-2 align-middle flex items-center justify-center">
+              <div className="h-14 w-14 overflow-hidden rounded-2xl bg-neutral-100 dark:bg-white/5">
                 {photoUrl ? (
                   <img src={photoUrl} alt={`Foto de ${product.name}`} className="h-full w-full object-cover" loading="lazy" />
                 ) : (
@@ -246,9 +258,9 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
               </div>
             </td>
             {/* SKU */}
-            <td className="px-4 py-4 align-middle border-l border-outline/20 text-neutral-600">{product.sku}</td>
+            <td className="px-2 py-2 align-middle border-l border-outline/20 text-neutral-600 text-sm text-center">{product.sku}</td>
             {/* Produto */}
-            <td className="px-4 py-4 align-middle border-l border-outline/20">
+            <td className="px-3 py-2 align-middle border-l border-outline/20">
               <div
                 className="text-sm font-medium text-text-light dark:text-text-dark"
                 title={product.name}
@@ -263,17 +275,17 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
               </div>
             </td>
             {/* Categoria */}
-            <td className="px-4 py-4 align-middle border-l border-outline/20 text-neutral-500 text-sm">{product.category || '-'}</td>
+            <td className="px-2 py-2 align-middle border-l border-outline/20 text-neutral-500 text-sm text-center">{product.category || '-'}</td>
             {/* Preço de venda */}
-            <td className="px-4 py-4 align-middle border-l border-outline/20 text-right">{formattedSale}</td>
+            <td className="px-2 py-2 align-middle border-l border-outline/20 text-center font-medium">{formattedSale}</td>
             {/* Preço de custo */}
-            <td className="px-4 py-4 align-middle border-l border-outline/20 text-right">{formattedCost}</td>
+            <td className="px-2 py-2 align-middle border-l border-outline/20 text-center text-neutral-500">{formattedCost}</td>
             {/* Margem */}
-            <td className="px-4 py-4 align-middle border-l border-outline/20 text-right">{formattedMargin}</td>
+            <td className="px-2 py-2 align-middle border-l border-outline/20 text-center text-neutral-500">{formattedMargin}</td>
             {/* Estoque */}
-            <td className="px-4 py-4 align-middle border-l border-outline/20 text-right">{estoqueAtual}</td>
+            <td className="px-2 py-2 align-middle border-l border-outline/20 text-center text-neutral-500">{estoqueAtual}</td>
             {/* Última venda */}
-            <td className="px-4 py-4 align-middle border-l border-outline/20 text-right">{ultimaVenda ? formatDate(ultimaVenda) : '-'}</td>
+            <td className="px-3 py-2 align-middle border-l border-outline/20 text-center">{ultimaVenda ? formatDate(ultimaVenda) : '-'}</td>
           </tr>
         );
       })}
@@ -310,6 +322,7 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
             onProductSaved={handleProductSaved}
           />
         )}
+      </div>
       </div>
     </section>
   );
