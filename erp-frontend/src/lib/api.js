@@ -23,11 +23,16 @@ async function request(path, options = {}) {
   const timeout = setTimeout(() => controller.abort(), options.timeout ?? 8000);
 
   try {
+    // attach Authorization header when token is present in localStorage
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('erp_access_token') : null;
+    const headers = {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
     const response = await fetch(`${baseUrl}${path}` || "", {
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-      },
+      headers,
       signal: controller.signal,
       ...options,
     });
@@ -255,5 +260,35 @@ export function deleteProductPhoto(id, publicPath) {
   return request(`/products/${id}/photos?path=${encoded}`, {
     method: 'DELETE',
   });
+}
+
+// --- Authentication helpers ---
+export async function login(username, password) {
+  const payload = { username, password };
+  const resp = await request('/auth/token', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  // resp expected { access_token, token_type }
+  if (resp && resp.access_token) {
+    try {
+      window.localStorage.setItem('erp_access_token', resp.access_token);
+    } catch (err) {
+      // ignore localStorage failures
+    }
+  }
+  return resp;
+}
+
+export function logout() {
+  try {
+    window.localStorage.removeItem('erp_access_token');
+  } catch (err) {
+    // ignore
+  }
+}
+
+export function fetchCurrentUser() {
+  return request('/auth/me');
 }
 

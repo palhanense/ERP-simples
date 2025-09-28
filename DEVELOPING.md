@@ -6,13 +6,17 @@ This project uses a Python FastAPI backend in `erp-backend` and a Vite React fro
 Quickstart (Windows PowerShell)
 -------------------------------
 
-1. Create / activate the editor virtualenv (we use `.venv2` in the workspace for consistency):
+1. Create / activate the editor virtualenv (we use `.venv` or `.venv2` in the workspace for consistency):
 
+   # Create venv (if missing)
+   python -m venv .venv2
+
+   # Activate in PowerShell
    & .\.venv2\Scripts\Activate.ps1
 
 2. Install backend requirements (once):
 
-   python -m pip install -r erp-backend\requirements.txt
+   .venv2\Scripts\python.exe -m pip install -r erp-backend\requirements.txt
 
 3. Start Postgres (docker-compose):
 
@@ -36,7 +40,20 @@ Quickstart (Windows PowerShell)
 VS Code
 -------
 
-Set the workspace Python interpreter to `.venv2\Scripts\python.exe`. Add `erp-backend` to `python.analysis.extraPaths` so the language server resolves the `app` package.
+Set the workspace Python interpreter to `.venv2\Scripts\python.exe` (or your chosen venv). If Pylance reports unresolved imports for `app` or installed packages:
+
+- Ensure the selected interpreter is the venv above (click the interpreter in the status bar).
+- Restart the language server / reload the window (Command Palette: "Developer: Reload Window").
+- Add `erp-backend` to `python.analysis.extraPaths` in `.vscode/settings.json` so the language server can find the `app` package.
+
+Example `.vscode/settings.json` snippet:
+
+``json
+{
+   "python.pythonPath": ".venv2\\Scripts\\python.exe",
+   "python.analysis.extraPaths": ["erp-backend"]
+}
+``
 
 Notes
 -----

@@ -3,6 +3,8 @@ import { ArrowPathIcon, MoonIcon, SunIcon } from "@heroicons/react/24/outline";
 import { clsx } from "clsx";
 
 import NavigationTabs from "./components/NavigationTabs";
+import Login from "./components/Login";
+import { useAuth } from './contexts/AuthContext';
 import { CashboxProvider } from "./contexts/CashboxContext";
 // HighlightRow removed (metrics moved to HomeReports/Fiado)
 import ProductsView from "./components/ProductsView";
@@ -48,6 +50,11 @@ function useThemePreference() {
 }
 
 export default function App() {
+  const { user, loading } = useAuth();
+
+  if (!loading && !user) {
+    return <Login />;
+  }
   // start on Home by default
   const [activeView, setActiveView] = useState("home");
   const [isDark, setIsDark] = useThemePreference();
@@ -62,7 +69,8 @@ export default function App() {
   const [sales, setSales] = useState([]);
   const [financialEntries, setFinancialEntries] = useState([]);
 
-  const [loading, setLoading] = useState(false);
+  // local data loading state (rename to avoid colliding with auth `loading`)
+  const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState("");
   const [wizardOpen, setWizardOpen] = useState(false);
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -80,7 +88,7 @@ export default function App() {
       : "bg-black text-white shadow-[0_20px_40px_rgba(0,0,0,0.25)] hover:-translate-y-1 hover:bg-black/90 focus-visible:outline-black"
   );
   const loadData = async () => {
-    setLoading(true);
+    setDataLoading(true);
     setError("");
     try {
         const [productList, customerList, saleList, finList] = await Promise.all([
@@ -96,7 +104,7 @@ export default function App() {
     } catch (err) {
       setError(err.message || "Falha ao carregar dados");
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -258,7 +266,7 @@ export default function App() {
           {activeView === "products" && (
             <ProductsView
             products={products}
-            loading={loading}
+            loading={dataLoading}
             onCreate={() => {
               setProductModalError("");
               setProductModalOpen(true);
@@ -277,7 +285,7 @@ export default function App() {
           {activeView === "customers" && (
             <CustomersView
               customers={customers}
-              loading={loading}
+              loading={dataLoading}
               onCreate={() => setCustomerModalOpen(true)}
             />
           )}
@@ -285,13 +293,13 @@ export default function App() {
             <SalesView
               sales={sales}
               onCancel={handleCancelSale}
-              loading={loading}
+              loading={dataLoading}
             />
           )}
           {activeView === "financials" && (
             <ExpensesView
               entries={financialEntries.filter((e) => e.type === 'despesa')}
-              loading={loading}
+              loading={dataLoading}
               onDelete={(id) => setFinancialEntries((cur) => cur.filter((e) => e.id !== id))}
               onUpdate={(entry) => setFinancialEntries((cur) => cur.map((e) => (e.id === entry.id ? entry : e)))}
             />
