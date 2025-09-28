@@ -2,13 +2,13 @@ import { useState } from "react";
 import { createSalePayment } from "../lib/api";
 
 export default function PaymentModal({ sale, onClose, onSaved }) {
-  const [amount, setAmount] = useState( (sale?.total_fiado && Number(sale.total_fiado)) || 0 );
+  const [amount, setAmount] = useState( (sale && Number(sale.total_fiado_pending ?? sale.total_fiado ?? 0)) || 0 );
   const [method, setMethod] = useState("dinheiro");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const remaining = Number(sale?.total_fiado || 0);
+  const remaining = Number(sale?.total_fiado_pending ?? sale?.total_fiado ?? 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

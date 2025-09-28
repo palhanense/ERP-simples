@@ -182,7 +182,18 @@ def read_customers(
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
 ) -> List[schemas.Customer]:
-    return crud.list_customers(db, skip=skip, limit=limit)
+    db_customers = crud.list_customers(db, skip=skip, limit=limit)
+    out = []
+    for c in db_customers:
+        try:
+            balance = crud.get_customer_balance(db, c.id)
+        except Exception:
+            balance = 0.0
+        cust = schemas.Customer.model_validate(c)
+        d = cust.model_dump()
+        d["balance_due"] = balance
+        out.append(d)
+    return out
 
 
 @app.get("/customers/{customer_id}", response_model=schemas.Customer)
@@ -190,7 +201,15 @@ def read_customer(customer_id: int, db: Session = Depends(get_db)) -> schemas.Cu
     db_customer = crud.get_customer(db, customer_id)
     if not db_customer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
-    return db_customer
+    try:
+        balance = crud.get_customer_balance(db, customer_id)
+    except Exception:
+        balance = 0.0
+    # use pydantic schema to serialize and include balance_due
+    cust = schemas.Customer.model_validate(db_customer)
+    d = cust.model_dump()
+    d["balance_due"] = balance
+    return d
 
 
 @app.put("/customers/{customer_id}", response_model=schemas.Customer)
@@ -236,8 +255,7 @@ def create_customer_payment(payload: dict, db: Session = Depends(get_db)):
         customer_id = payload.get("customer_id")
         amount = payload.get("amount")
         method = payload.get("method")
-        notes = payload.get("notes")
-        result = crud.create_customer_payment(db, customer_id=customer_id, amount=amount, method=method, notes=notes)
+        result = crud.create_customer_payment(db, customer_id=customer_id, amount=amount, method=method)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
@@ -250,7 +268,6 @@ def create_customer_payment(payload: dict, db: Session = Depends(get_db)):
         "customer_id": payment.customer_id,
         "method": str(payment.method),
         "amount": float(payment.amount),
-        "notes": payment.notes,
         "created_at": payment.created_at.isoformat(),
     }
 

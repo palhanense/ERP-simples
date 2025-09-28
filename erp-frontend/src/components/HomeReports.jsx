@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Calendar from "./Calendar";
+import DateRange from "./DateRange";
 import { fetchSales, fetchFinancialEntries } from "../lib/api";
 
 function toNumber(v) {
@@ -85,7 +86,7 @@ export default function HomeReports() {
     return Array.from(catMap.entries()).sort((a,b) => b[1]-a[1]).slice(0,3).map(([name, total]) => ({ name, total }));
   }, [sales]);
 
-  const fiadoTotal = useMemo(() => sales.reduce((acc, s) => acc + toNumber(s.total_fiado), 0), [sales]);
+  const fiadoTotal = useMemo(() => sales.reduce((acc, s) => acc + toNumber(s.total_fiado_pending ?? s.total_fiado ?? 0), 0), [sales]);
 
   return (
     <div>

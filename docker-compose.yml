@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   db:
     image: postgres:15
@@ -16,6 +15,7 @@ services:
       context: ./erp-backend
     environment:
       DATABASE_URL: "postgresql+psycopg://erp:Eme02287523375@db:5432/erp"
+      DEV: "1"
       MEDIA_ROOT: "/app/data/product_photos"
     depends_on:
       - db
@@ -25,6 +25,23 @@ services:
     ports:
       - "8000:8000"
     command: ["/app/docker-entrypoint.sh"]
+
+  frontend:
+    build:
+      context: ./erp-frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      # On Windows mounts sometimes need polling to pick up changes
+      CHOKIDAR_USEPOLLING: "true"
+    depends_on:
+      - backend
+    volumes:
+      - ./erp-frontend:/app:rw
+      # keep node_modules inside the container (anonymous volume) so host mount doesn't hide them
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 volumes:
   erp-db-data:

@@ -1,7 +1,14 @@
 export function formatDate(iso) {
   try {
     if (!iso) return '';
-    const d = new Date(iso);
+    let d;
+    // handle plain YYYY-MM-DD as local date to avoid TZ shifts
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      const [y, m, day] = iso.split('-').map((p) => Number(p));
+      d = new Date(y, m - 1, day);
+    } else {
+      d = new Date(iso);
+    }
     if (isNaN(d)) return iso;
     const dd = String(d.getDate()).padStart(2, '0');
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -15,7 +22,13 @@ export function formatDate(iso) {
 export function formatDateTime(iso) {
   try {
     if (!iso) return '';
-    const d = new Date(iso);
+    let d;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      const [y, m, day] = iso.split('-').map((p) => Number(p));
+      d = new Date(y, m - 1, day);
+    } else {
+      d = new Date(iso);
+    }
     if (isNaN(d)) return iso;
     const dd = String(d.getDate()).padStart(2, '0');
     const mm = String(d.getMonth() + 1).padStart(2, '0');

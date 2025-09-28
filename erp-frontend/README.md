@@ -1,62 +1,44 @@
+
 # ERP Frontend
 
-Interface web construida com React, Vite e TailwindCSS para complementar o ERP.
-A identidade utiliza paleta preto/branco, tipografia Montserrat e modos Dia/Noite.
+Interface web construída com React, Vite e TailwindCSS.
 
-## Conceitos visuais
+## Requisitos
 
-- Paleta neutra: fundo claro ou escuro com alto contraste.
-- Hierarquia objetiva: titulos em caixa alta e bastante espaamento.
-- Espacos de respiro: cards arredondados e margens generosas.
-- Tipografia Montserrat: aplicada globalmente com pesos 300-700.
-- Modo Dia/Noite: alternancia manual persistida em `localStorage`.
+- Node.js 18+ (LTS)
+- Backend FastAPI rodando (padrão: http://127.0.0.1:8000)
 
-## Estrutura de pastas
+## Instalação
 
-```
-.
-+-- public/
-|   +-- favicon.svg
-+-- src/
-|   +-- App.jsx
-|   +-- index.css
-|   +-- main.jsx
-|   +-- components/
-|   |   +-- CreateSaleDialog.jsx
-|   |   +-- CustomersView.jsx
-|   |   +-- HighlightRow.jsx
-|   |   +-- NavigationTabs.jsx
-|   |   +-- ProductsView.jsx
-|   |   +-- SalesView.jsx
-|   +-- lib/
-|       +-- api.js
-+-- index.html
-+-- package.json
-+-- postcss.config.js
-+-- tailwind.config.js
-+-- vite.config.js
+```powershell
+npm install
 ```
 
-## Configuracao
+## Configuração
 
-- Requer Node.js 18+ (LTS) e `npm`.
-- O backend FastAPI deve estar rodando (padrao `http://127.0.0.1:8000`).
-- Ajuste a URL via `.env` na raiz se necessario:
-
+Crie um arquivo `.env` na raiz (opcional):
 ```
 VITE_API_URL=http://127.0.0.1:8000
 ```
 
 ## Desenvolvimento
 
-```bash
-npm install
-npm run dev
+```powershell
+npm run dev -- --host
 ```
 
-O servidor inicia em `http://localhost:5173`. As listas de produtos, clientes e vendas usam a API; o modal de venda permite escolher cliente, itens, dividir pagamentos (dinheiro, cartao, pix, fiado) e cancelar vendas.
+Acesse [http://localhost:5173](http://localhost:5173).
+
+## Estrutura
+
+- `src/components/` — componentes de UI (produtos, clientes, vendas, financeiro, etc)
+- `src/lib/api.js` — integração com a API backend
 
 ## Build
+
+```powershell
+npm run build
+```
 
 ```bash
 npm run build

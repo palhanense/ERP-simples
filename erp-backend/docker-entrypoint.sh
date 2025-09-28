@@ -21,4 +21,9 @@ mkdir -p /app/data /app/data/product_photos
 python -c "from app.database import init_db; init_db()"
 
 # Start Uvicorn
-exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+if [ "${DEV:-}" = "1" ] || [ "${DEV:-}" = "true" ]; then
+  echo "Starting Uvicorn in development mode (reload enabled)..."
+  exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+else
+  exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+fi

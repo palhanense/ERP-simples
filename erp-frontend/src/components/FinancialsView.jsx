@@ -1,8 +1,10 @@
 import { useState } from "react";
+import useConfirm from '../hooks/useConfirm';
 import { PlusIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { clsx } from "clsx";
 
 import { createFinancialEntry, updateFinancialEntry, deleteFinancialEntry } from "../lib/api";
+import { formatDateTime } from "../lib/dateFormat";
 import FinancialEntryModal from "./FinancialEntryModal";
 
 export default function FinancialsView({ entries = [], loading = false, onCreate = () => {}, onDelete = () => {}, onUpdate = () => {} }) {
@@ -10,6 +12,7 @@ export default function FinancialsView({ entries = [], loading = false, onCreate
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirm, ConfirmElement] = useConfirm();
 
   const handleCreateClick = () => {
     setEditing(null);
@@ -42,7 +45,8 @@ export default function FinancialsView({ entries = [], loading = false, onCreate
   };
 
   const handleDelete = async (entry) => {
-    if (!confirm("Confirma exclusão?")) return;
+    const ok = await confirm({ title: 'Confirmar exclusão', message: 'Confirma exclusão da entrada financeira?', confirmLabel: 'Excluir', cancelLabel: 'Cancelar' });
+    if (!ok) return;
     try {
       await deleteFinancialEntry(entry.id);
       onDelete(entry.id);
@@ -83,7 +87,7 @@ export default function FinancialsView({ entries = [], loading = false, onCreate
             <tbody>
               {entries.map((entry) => (
                 <tr key={entry.id} className="rounded-2xl border border-outline/20 bg-white/70 transition hover:-translate-y-0.5 hover:border-outline hover:bg-white dark:border-white/10 dark:bg-surface-dark/60 dark:hover:border-white/30">
-                  <td className="px-4 py-3">{new Date(entry.date).toLocaleString()}</td>
+                  <td className="px-4 py-3">{formatDateTime(entry.date)}</td>
                   <td className="px-4 py-3">{entry.type}</td>
                   <td className="px-4 py-3">{entry.category}</td>
                   <td className="px-4 py-3">{entry.notes}</td>
@@ -115,6 +119,7 @@ export default function FinancialsView({ entries = [], loading = false, onCreate
           error={error}
         />
       )}
+      {ConfirmElement}
     </section>
   );
 }

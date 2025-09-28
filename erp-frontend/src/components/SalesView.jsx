@@ -1,6 +1,8 @@
 ﻿import { clsx } from "clsx";
 import { useEffect, useState } from "react";
 import Calendar from "./Calendar";
+import DateRange from "./DateRange";
+import useConfirm from '../hooks/useConfirm';
 // ...existing code...
 
 // small date picker helper using native inputs for consistency with design
@@ -36,11 +38,17 @@ function SummaryChip({ label, value }) {
 }
 
 export default function SalesView({ sales, onCancel, loading }) {
-  const fiadoTotal = sales.reduce((acc, sale) => acc + Number(sale.total_fiado || 0), 0);
+  const fiadoTotal = sales.reduce((acc, sale) => acc + Number(sale.total_fiado_pending ?? sale.total_fiado ?? 0), 0);
   const totalAmount = sales.reduce((acc, sale) => acc + Number(sale.total_amount || 0), 0);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  // default period: first day of current month -> today (local date format to avoid TZ shifts)
+  const today = new Date();
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const pad = (n) => n.toString().padStart(2, '0');
+  const localYMD = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const [fromDate, setFromDate] = useState(() => localYMD(firstOfMonth));
+  const [toDate, setToDate] = useState(() => localYMD(today));
   const [filtered, setFiltered] = useState(sales);
+  const [confirm, ConfirmElement] = useConfirm();
   // ...existing code...
 
   useEffect(() => {
@@ -49,9 +57,11 @@ export default function SalesView({ sales, onCancel, loading }) {
       setToDate(fromDate);
       return;
     }
+    const pad = (n) => n.toString().padStart(2, '0');
+    const localYMD = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     const f = sales.filter((s) => {
       if (!fromDate && !toDate) return true;
-      const created = new Date(s.created_at).toISOString().slice(0, 10);
+      const created = s.created_at ? localYMD(new Date(s.created_at)) : '';
       if (fromDate && created < fromDate) return false;
       if (toDate && created > toDate) return false;
       return true;
@@ -114,7 +124,7 @@ export default function SalesView({ sales, onCancel, loading }) {
                   Total: {Number(sale.total_amount || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </span>
                 <span>
-                  Fiado: {Number(sale.total_fiado || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  Fiado: {Number(sale.total_fiado_pending ?? sale.total_fiado ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </span>
                 <span>Status: {sale.status}</span>
                 <span>
@@ -124,7 +134,7 @@ export default function SalesView({ sales, onCancel, loading }) {
               <div className="flex gap-2">
                 {sale.status !== "cancelled" && (
                   <button
-                    onClick={() => onCancel(sale.id)}
+                    onClick={async (e) => { e.stopPropagation(); const ok = await confirm({ title: 'Confirmar cancelamento', message: 'Confirma cancelamento da venda?', confirmLabel: 'Cancelar venda', cancelLabel: 'Manter' }); if (ok) onCancel(sale.id); }}
                     className="self-start rounded-full border border-outline px-4 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-neutral-500 transition hover:border-outline/80 dark:border-white/10 dark:text-neutral-300 dark:hover:border-white/30"
                   >
                     Cancelar venda
@@ -140,6 +150,7 @@ export default function SalesView({ sales, onCancel, loading }) {
           </p>
         )}
       </div>
+      {ConfirmElement}
     </section>
   );
 }

@@ -85,6 +85,8 @@ class Customer(CustomerBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    # current outstanding balance (derived)
+    balance_due: float = 0.0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -170,6 +172,8 @@ class Sale(SaleBase):
     customer: Optional[Customer] = None
     items: List[SaleItem]
     payments: List[SalePayment]
+    # pending fiado after customer payments allocations (amount still owed for this sale)
+    total_fiado_pending: float = 0.0
 
     model_config = ConfigDict(from_attributes=True)
 

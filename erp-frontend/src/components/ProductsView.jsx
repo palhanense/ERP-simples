@@ -1,10 +1,12 @@
 ﻿import { clsx } from "clsx";
 import { PlusIcon } from "@heroicons/react/24/outline";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Calendar from "./Calendar";
+import DateRange from "./DateRange";
 import { fetchProductsReport } from "../lib/api";
 import { resolveMediaUrl } from "../lib/api";
 import ProductCreateModal from "./ProductCreateModal";
+import { formatDate } from "../lib/dateFormat";
 
 export default function ProductsView({ products, loading, onCreate = () => {}, onEdit, onProductsChanged }) {
   const [editingProduct, setEditingProduct] = useState(null);
@@ -25,7 +27,7 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
   const [fromDate, setFromDate] = useState(() => firstOfMonthString());
   const [toDate, setToDate] = useState(() => todayString());
   const [filtered, setFiltered] = useState(products || []);
-  const [serverTotals, setServerTotals] = useState({ total_products: 0, total_cost: 0, total_sale: 0 });
+  const [serverTotals, setServerTotals] = useState(null);
   const [localLoading, setLocalLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -81,7 +83,7 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
     }
     return (
       <div className="rounded-2xl border border-outline px-4 py-2 text-xs uppercase tracking-[0.25em] text-neutral-500 dark:border-white/20 dark:text-neutral-300">
-        <span className="block text-[0.55rem] text-neutral-400 dark:text-neutral-500">{label}</span>
+        <span className="block text-[0.6rem] text-neutral-600 dark:text-neutral-300 font-semibold">{label}</span>
         <span className="mt-1 block text-sm font-semibold text-text-light dark:text-text-dark">{display}</span>
       </div>
     );
@@ -130,6 +132,41 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
     })();
   }, [products, fromDate, toDate]);
 
+  // compute local totals from filtered products: count, total cost (cost_price * stock), total sale (sale_price * stock)
+  const localTotals = useMemo(() => {
+    let totalProducts = (filtered || []).length;
+    let totalCost = 0;
+    let totalSale = 0;
+    for (const p of (filtered || [])) {
+      const stock = Number(resolveStockForTotals(p) || 0);
+      const cost = Number(p.cost_price || p.cost || 0) || 0;
+      const sale = Number(p.sale_price || p.price || 0) || 0;
+      totalCost += stock * cost;
+      totalSale += stock * sale;
+    }
+    return { total_products: totalProducts, total_cost: totalCost, total_sale: totalSale };
+  }, [filtered]);
+
+  const displayedTotals = {
+    total_products:
+      serverTotals && serverTotals.total_products != null ? serverTotals.total_products : localTotals.total_products,
+    total_cost:
+      serverTotals && serverTotals.total_cost != null ? serverTotals.total_cost : localTotals.total_cost,
+    total_sale:
+      serverTotals && serverTotals.total_sale != null ? serverTotals.total_sale : localTotals.total_sale,
+  };
+
+  // Ensure numeric safe values for display (avoid mixing ?? and || inside JSX)
+  const totalProductsNum = Number(
+    displayedTotals.total_products != null ? displayedTotals.total_products : (filtered.length || 0)
+  ) || 0;
+  const totalCostNum = Number(
+    displayedTotals.total_cost != null ? displayedTotals.total_cost : (localTotals.total_cost || 0)
+  ) || 0;
+  const totalSaleNum = Number(
+    displayedTotals.total_sale != null ? displayedTotals.total_sale : (localTotals.total_sale || 0)
+  ) || 0;
+
   return (
     <section className="space-y-6">
       <header className="flex flex-col gap-3">
@@ -144,17 +181,19 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
           </button>
         </div>
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-3">
-            <SummaryChip label="Total produtos" value={serverTotals.total_products ?? filtered.length} format="number" />
-            {/* totais retornados pelo servidor */}
-            <SummaryChip label="Valor compra" value={serverTotals.total_cost ?? 0} />
-            <SummaryChip label="Valor venda" value={serverTotals.total_sale ?? 0} />
+          {/* Mostrar totais sempre (antes eram ocultos em telas pequenas) */}
+          <div className="flex items-center gap-3">
+            <SummaryChip label="Ítens totais" value={totalProductsNum} format="number" />
+            {/* totais retornados pelo servidor (ou calculados localmente) */}
+            <SummaryChip label="Valor de custo" value={totalCostNum} />
+            <SummaryChip label="Valor de venda" value={totalSaleNum} />
           </div>
           <div className="ml-auto flex items-center gap-3">
             <DateRange from={fromDate} to={toDate} onChange={(v) => { if (v.from) setFromDate(v.from); if (v.to) setToDate(v.to); }} />
           </div>
         </div>
       </header>
+      
       <div
         className={clsx(
           "rounded-3xl border border-outline/30 bg-white p-6 shadow-subtle dark:border-white/10 dark:bg-surface-dark/40",
@@ -163,90 +202,83 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
       >
   {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
   <table className="w-full table-fixed border-separate border-spacing-y-4">
-          <thead>
-            <tr className="text-left text-xs uppercase tracking-[0.25em] text-neutral-400 dark:text-neutral-500">
-              <th className="w-[10%]">Foto</th>
-              <th className="w-[10%]">SKU</th>
-              <th className="w-[20%]">Prod</th>
-              <th className="w-[10%]">Cat</th>
-              <th className="w-[8%]">Custo</th>
-              <th className="w-[8%]">Venda</th>
-              <th className="w-[8%]">Margem</th>
-              <th className="w-[6%]">Vend.</th>
-              <th className="w-[6%]">Estq</th>
-              <th className="w-[6%]">Ú. V</th>
-              <th className="w-[6%]">Ú. C</th>
-              <th className="w-[6%]">Min</th>
-            </tr>
-          </thead>
-          <tbody className="text-sm">
-            {filtered.map((product) => {
-              const photo = product.photos?.[0] || "";
-              const photoUrl = photo ? resolveMediaUrl(photo) : "";
-              const placeholderInitial = product.name?.charAt(0)?.toUpperCase() || "P";
-              // Exemplo: campos fictícios para estoque, última venda e compra
-              const estoqueAtual = resolveStockForTotals(product) ?? "-";
-              const ultimaVenda = product.last_sale_date ?? "-";
-              const ultimaCompra = product.last_purchase_date ?? "-";
+    <thead>
+      <tr className="text-left text-xs uppercase tracking-[0.25em] text-neutral-400 dark:text-neutral-500">
+    <th className="w-[96px] text-center">Foto</th>
+    <th className="w-[10%] border-l border-outline/20 text-center">SKU</th>
+    <th className="w-[28%] border-l border-outline/20 text-center">Produto</th>
+  <th className="w-[12%] border-l border-outline/20 text-center">catego</th>
+  <th className="w-[10%] border-l border-outline/20 text-center">Preço<br/>venda</th>
+  <th className="w-[10%] border-l border-outline/20 text-center">Preço<br/>custo</th>
+  <th className="w-[8%] border-l border-outline/20 text-center">Margem</th>
+  <th className="w-[8%] border-l border-outline/20 text-center">esto-<br/>que</th>
+  <th className="w-[12%] border-l border-outline/20 text-center">ultima<br/>venda</th>
+      </tr>
+    </thead>
+    <tbody className="text-sm">
+      {filtered.map((product) => {
+        const photo = product.photos?.[0] || "";
+        const photoUrl = photo ? resolveMediaUrl(photo) : "";
+        const placeholderInitial = product.name?.charAt(0)?.toUpperCase() || "P";
+        // Prefer backend-provided stock when available, otherwise fallback to local heuristic
+        const estoqueAtual = (product.stock !== undefined && product.stock !== null)
+          ? product.stock
+          : resolveStockForTotals(product) ?? "-";
+        const ultimaVenda = product.last_sale_date ?? null;
 
-              return (
-                <tr
-                  key={product.id}
-                  className="rounded-2xl border border-outline/20 bg-white/70 transition hover:-translate-y-0.5 hover:border-outline hover:bg-white dark:border-white/10 dark:bg-surface-dark/60 dark:hover:border-white/30 cursor-pointer"
-                  onClick={() => handleEdit(product)}
-                >
-                  <td className="rounded-l-2xl px-4 py-4">
-                    <div className="h-16 w-16 overflow-hidden rounded-2xl border border-outline/20 bg-neutral-100 dark:border-white/10 dark:bg-white/5">
-                      {photoUrl ? (
-                        <img
-                          src={photoUrl}
-                          alt={`Foto de ${product.name}`}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-neutral-400 dark:text-neutral-500">
-                          {placeholderInitial}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-neutral-500 dark:text-neutral-400">{product.sku}</td>
-                  <td className="px-4 py-4 font-medium">{product.name}</td>
-                  <td className="px-4 py-4 text-neutral-500 dark:text-neutral-400">{product.category}</td>
-                  <td className="px-4 py-4">
-                    {Number(product.cost_price || 0).toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </td>
-                  <td className="px-4 py-4">
-                    {Number(product.sale_price || 0).toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </td>
-                  <td className="px-4 py-4">
-                    {Number(product.margin || 0).toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </td>
-                  <td className="px-4 py-4">
-                    {Number(product.total_sold || 0).toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </td>
-                  <td className="px-4 py-4">{estoqueAtual}</td>
-                  <td className="px-4 py-4">{ultimaVenda}</td>
-                  <td className="px-4 py-4">{ultimaCompra}</td>
-                  <td className="rounded-r-2xl px-4 py-4">{product.min_stock}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        // format numbers without currency symbol but with two decimals
+        const formattedSale = Number(product.sale_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const formattedCost = Number(product.cost_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const formattedMargin = (product.margin_percent !== undefined && product.margin_percent !== null)
+          ? `${Number(product.margin_percent).toFixed(2)}%`
+          : Number(product.margin || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        return (
+          <tr key={product.id} onClick={() => handleEdit(product)} className="cursor-pointer">
+            {/* Foto */}
+            <td className="px-4 py-4 align-middle">
+              <div className="h-20 w-20 overflow-hidden rounded-2xl bg-neutral-100 dark:bg-white/5">
+                {photoUrl ? (
+                  <img src={photoUrl} alt={`Foto de ${product.name}`} className="h-full w-full object-cover" loading="lazy" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-neutral-400 dark:text-neutral-500">{placeholderInitial}</div>
+                )}
+              </div>
+            </td>
+            {/* SKU */}
+            <td className="px-4 py-4 align-middle border-l border-outline/20 text-neutral-600">{product.sku}</td>
+            {/* Produto */}
+            <td className="px-4 py-4 align-middle border-l border-outline/20">
+              <div
+                className="text-sm font-medium text-text-light dark:text-text-dark"
+                title={product.name}
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden'
+                }}
+              >
+                {product.name}
+              </div>
+            </td>
+            {/* Categoria */}
+            <td className="px-4 py-4 align-middle border-l border-outline/20 text-neutral-500 text-sm">{product.category || '-'}</td>
+            {/* Preço de venda */}
+            <td className="px-4 py-4 align-middle border-l border-outline/20 text-right">{formattedSale}</td>
+            {/* Preço de custo */}
+            <td className="px-4 py-4 align-middle border-l border-outline/20 text-right">{formattedCost}</td>
+            {/* Margem */}
+            <td className="px-4 py-4 align-middle border-l border-outline/20 text-right">{formattedMargin}</td>
+            {/* Estoque */}
+            <td className="px-4 py-4 align-middle border-l border-outline/20 text-right">{estoqueAtual}</td>
+            {/* Última venda */}
+            <td className="px-4 py-4 align-middle border-l border-outline/20 text-right">{ultimaVenda ? formatDate(ultimaVenda) : '-'}</td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
         {filtered.length === 0 && !loading && !localLoading && (
           <p className="mt-4 text-sm text-neutral-500 dark:text-neutral-400">
             Nenhum produto cadastrado ate o momento.

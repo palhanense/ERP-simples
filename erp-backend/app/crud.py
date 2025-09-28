@@ -295,6 +295,11 @@ def create_sale(db: Session, sale_in: schemas.SaleCreate) -> models.Sale:
     )
     # Acessa relacionamentos para carregamento antes do fechamento da sessao
     _ensure_loaded(sale)
+    # attach pending fiado for serialization
+    try:
+        sale.total_fiado_pending = get_sale_fiado_remaining(db, sale)
+    except Exception:
+        sale.total_fiado_pending = 0.0
     return sale
 
 
@@ -311,6 +316,12 @@ def list_sales(db: Session, skip: int = 0, limit: int = 100) -> List[models.Sale
         .limit(limit)
         .all()
     )
+    # attach pending fiado per sale for serialization
+    for s in sales:
+        try:
+            s.total_fiado_pending = get_sale_fiado_remaining(db, s)
+        except Exception:
+            s.total_fiado_pending = 0.0
     return sales
 
 
@@ -325,7 +336,32 @@ def get_sale(db: Session, sale_id: int) -> Optional[models.Sale]:
         .filter(models.Sale.id == sale_id)
         .first()
     )
+    if sale:
+        try:
+            sale.total_fiado_pending = get_sale_fiado_remaining(db, sale)
+        except Exception:
+            sale.total_fiado_pending = 0.0
     return sale
+
+
+def get_sale_fiado_remaining(db: Session, sale: models.Sale) -> float:
+    """Compute remaining fiado for a single sale: sum of FIADO sale payments minus allocations to that sale."""
+    from decimal import Decimal
+    if not sale:
+        return 0.0
+    fiado_total = Decimal('0')
+    for p in (sale.payments or []):
+        try:
+            pm = p.method
+        except Exception:
+            pm = None
+        if pm == models.PaymentMethod.FIADO or str(pm) == str(models.PaymentMethod.FIADO):
+            fiado_total += Decimal(p.amount or 0)
+
+    allocated = db.query(func.coalesce(func.sum(models.CustomerPaymentAllocation.amount), 0)).filter(models.CustomerPaymentAllocation.sale_id == sale.id).scalar() or 0
+    allocated = Decimal(allocated)
+    remaining = fiado_total - allocated
+    return float(remaining if remaining > 0 else 0)
 
 
 def update_sale(
@@ -601,7 +637,39 @@ def cashbox_report(db: Session, cashbox_id: int) -> dict:
     return {"payments": payments, "entries": entries, "expected_cash": expected_cash}
 
 
-def create_customer_payment(db: Session, customer_id: int, amount: float, method: str, notes: str | None = None) -> dict:
+def get_customer_balance(db: Session, customer_id: int) -> float:
+    """Return total outstanding fiado for customer (sum of sale fiado amounts minus allocations)."""
+    from decimal import Decimal
+    customer = db.get(models.Customer, customer_id)
+    if not customer:
+        raise ValueError("Customer not found")
+    outstanding_sales = (
+        db.query(models.Sale)
+        .filter(models.Sale.customer_id == customer.id)
+        .order_by(models.Sale.created_at.asc())
+        .all()
+    )
+    total_outstanding = Decimal('0')
+    for sale in outstanding_sales:
+        fiado_total = Decimal('0')
+        for p in (sale.payments or []):
+            try:
+                pm = p.method
+            except Exception:
+                pm = None
+            if pm == models.PaymentMethod.FIADO or str(pm) == str(models.PaymentMethod.FIADO):
+                fiado_total += Decimal(p.amount or 0)
+
+        allocated = db.query(func.coalesce(func.sum(models.CustomerPaymentAllocation.amount), 0)).filter(models.CustomerPaymentAllocation.sale_id == sale.id).scalar() or 0
+        allocated = Decimal(allocated)
+        sale_remaining = fiado_total - allocated
+        if sale_remaining > 0:
+            total_outstanding += sale_remaining
+
+    return float(total_outstanding)
+
+
+def create_customer_payment(db: Session, customer_id: int, amount: float, method: str) -> dict:
     """Create a CustomerPayment and allocate the amount to the customer's outstanding fiado sales.
 
     Allocation order: most recent sale first (DESC by created_at). For each sale with balance_due > 0,
@@ -618,7 +686,7 @@ def create_customer_payment(db: Session, customer_id: int, amount: float, method
     if not customer:
         raise ValueError("Customer not found")
 
-    payment = models.CustomerPayment(customer_id=customer.id, method=models.PaymentMethod(method), amount=Decimal(amount), notes=notes)
+    payment = models.CustomerPayment(customer_id=customer.id, method=models.PaymentMethod(method), amount=Decimal(amount))
     db.add(payment)
 
     remaining = Decimal(amount)

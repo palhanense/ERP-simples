@@ -1,41 +1,47 @@
 # ERP Backend
 
-API em FastAPI para gerenciar produtos, clientes e vendas para lojas pequenas.
+# ERP Backend
+
+API em FastAPI para gerenciar produtos, clientes, vendas e financeiro.
 
 ## Requisitos
 
 - Python 3.11+
-- Pip (ou outro gerenciador compativel)
+- Postgres (veja docker-compose.yml)
+- Pip
 
-## Instalacao
+## Instalação
 
-`ash
+```powershell
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-`
+```
 
 ## Executando
 
-`ash
+Configure a variável de ambiente `DATABASE_URL` para o Postgres, por exemplo:
+```
+DATABASE_URL=postgresql+psycopg://erp:senha@localhost:5432/erp
+```
+
+Inicie o servidor:
+```powershell
 uvicorn app.main:app --reload
-`
+```
 
-A documentacao interativa fica em http://127.0.0.1:8000/docs.
+A documentação interativa estará em [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
-## Modulos disponiveis
-
-- **Produtos**: campos nome, sku, categoria, custo, preco, estoque minimo, lista de fotos e atributos extras configuraveis.
-- **Clientes**: cadastro basico com nome, documento, email, telefone e observacoes.
-- **Vendas**: itens com quantidade e preco, multiplas formas de pagamento (dinheiro, cartao, pix, fiado) e controle de cancelamento.
-
-Pagamentos fiado sao destacados nos retornos para alimentar relatorios de contas a receber. Os dados ficam em SQLite (data/erp.db).
 ## Dados de exemplo
 
-Para preparar o banco SQLite com dados basicos de clientes, produtos e vendas de teste:
-
-```
+Para popular o banco com dados de teste:
+```powershell
 .venv\Scripts\python.exe scripts\seed_data.py
 ```
 
-O script cria o arquivo `data/erp.db` caso nao exista e popula registros apenas quando as tabelas estao vazias.
+## Estrutura
+
+- **Produtos**: nome, sku, categoria, fornecedor, custo, preço, estoque, fotos, atributos extras.
+- **Clientes**: nome, email, telefone, observações.
+- **Vendas**: itens, múltiplas formas de pagamento, cancelamento.
+- **Financeiro**: entradas/saídas, categorias, controle de caixa.

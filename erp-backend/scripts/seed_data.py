@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import random
 import sys
 from datetime import datetime, timedelta
@@ -12,73 +11,36 @@ from sqlalchemy.orm import Session
 from app import models
 from app.database import SessionLocal, init_db
 
+from faker import Faker  # Keeping this line as it is necessary for the code to function
+fake = Faker('pt_BR')  # Keeping this line as it is necessary for the code to function
+
 PRODUCTS = [
     {
-        "name": "Vestido Midi Essential",
-        "sku": "VST-001",
-        "category": "Vestuario",
-        "cost_price": 89.9,
-        "sale_price": 159.9,
-        "stock": 25,
-        "min_stock": 10,
+        "name": fake.unique.word().capitalize() + " " + fake.word().capitalize(),
+        "sku": f"SKU-{i:03d}",
+        "category": fake.word().capitalize(),
+        "supplier": fake.company(),
+        "cost_price": round(fake.pydecimal(left_digits=3, right_digits=2, positive=True), 2),
+        "sale_price": round(fake.pydecimal(left_digits=3, right_digits=2, positive=True), 2),
+        "stock": fake.random_int(min=0, max=100),
+        "min_stock": fake.random_int(min=0, max=20),
         "photos": [],
-        "extra_attributes": {"tamanho": ["P", "M", "G"]},
-    },
-    {
-        "name": "Blusa Oversized Soft",
-        "sku": "BLS-101",
-        "category": "Vestuario",
-        "cost_price": 59.5,
-        "sale_price": 119.0,
-        "stock": 40,
-        "min_stock": 12,
-        "photos": [],
-        "extra_attributes": {"tamanho": ["M", "G", "GG"]},
-    },
-    {
-        "name": "Calca Jeans Minimal",
-        "sku": "CLJ-204",
-        "category": "Calcas",
-        "cost_price": 110.0,
-        "sale_price": 189.5,
-        "stock": 18,
-        "min_stock": 8,
-        "photos": [],
-        "extra_attributes": {"tamanho": ["36", "38", "40", "42"]},
-    },
-    {
-        "name": "Saia Plissada Noir",
-        "sku": "SAI-330",
-        "category": "Saias",
-        "cost_price": 72.3,
-        "sale_price": 139.0,
-        "stock": 12,
-        "min_stock": 6,
-        "photos": [],
-        "extra_attributes": {"tamanho": ["P", "M", "G"]},
-    },
+        "extra_attributes": {"tamanho": fake.random_elements(elements=["P", "M", "G", "GG", "36", "38", "40", "42"], length=3, unique=True)},
+    }
+    for i in range(50)
 ]
 
 CUSTOMERS = [
     {
-        "name": "Ana Paula",
-        "email": "ana@example.com",
-        "phone": "+55 11 98888-1111",
-        "notes": "Cliente recorrente",
-    },
-    {
-        "name": "Carlos Lima",
-        "email": "carlos@example.com",
-        "phone": "+55 11 97777-2222",
-        "notes": "Prefere pagamento em cartao",
-    },
-    {
-        "name": "Loja Dona Rosa",
-        "email": "contato@donarosa.com",
-        "phone": "+55 11 3666-1234",
-        "notes": "Cliente atacado",
-    },
+        "name": fake.name(),
+        "email": fake.email(),
+        "phone": fake.phone_number(),
+        "notes": fake.sentence(nb_words=6),
+    }
+    for _ in range(50)
 ]
+
+## Removido bloco de sobrescrita de CUSTOMERS para garantir 50 clientes gerados com Faker
 
 PAYMENTS_CATALOG = [
     models.PaymentMethod.DINHEIRO,
@@ -89,12 +51,21 @@ PAYMENTS_CATALOG = [
 
 
 def ensure_products(db: Session) -> list[models.Product]:
-    existing = db.query(models.Product).all()
-    if existing:
-        return existing
-
+    # Apagar dependências antes de apagar produtos
+    db.query(models.SalePayment).delete()
+    db.query(models.SaleItem).delete()
+    db.query(models.Sale).delete()
+    db.query(models.CustomerPaymentAllocation).delete()
+    db.query(models.CustomerPayment).delete()
+    db.query(models.FinancialEntry).delete()
+    db.commit()
+    db.query(models.Product).delete()
+    db.commit()
     created: list[models.Product] = []
     for payload in PRODUCTS:
+        # garantir sku único
+        if db.query(models.Product).filter_by(sku=payload["sku"]).first():
+            continue
         product = models.Product(**payload)
         db.add(product)
         created.append(product)
@@ -105,10 +76,16 @@ def ensure_products(db: Session) -> list[models.Product]:
 
 
 def ensure_customers(db: Session) -> list[models.Customer]:
-    existing = db.query(models.Customer).all()
-    if existing:
-        return existing
-
+    # Apagar dependências antes de apagar clientes
+    db.query(models.SalePayment).delete()
+    db.query(models.SaleItem).delete()
+    db.query(models.Sale).delete()
+    db.query(models.CustomerPaymentAllocation).delete()
+    db.query(models.CustomerPayment).delete()
+    db.query(models.FinancialEntry).delete()
+    db.commit()
+    db.query(models.Customer).delete()
+    db.commit()
     created: list[models.Customer] = []
     for payload in CUSTOMERS:
         customer = models.Customer(**payload)
@@ -121,23 +98,24 @@ def ensure_customers(db: Session) -> list[models.Customer]:
 
 
 def seed_sales(db: Session, customers: list[models.Customer], products: list[models.Product]) -> None:
-    if db.query(models.Sale).count() > 0:
-        return
-
-    for index in range(5):
+    db.query(models.SalePayment).delete()
+    db.query(models.SaleItem).delete()
+    db.query(models.Sale).delete()
+    db.commit()
+    for index in range(50):
         customer = random.choice(customers)
         sale = models.Sale(
             customer_id=customer.id,
             status=models.SaleStatus.COMPLETED,
-            notes="Pedido de teste",
+            notes=fake.sentence(nb_words=6),
         )
         db.add(sale)
         db.flush()
 
         total_amount = 0.0
-        selected_products = random.sample(products, k=min(len(products), 2 + index % 2))
+        selected_products = random.sample(products, k=random.randint(1, 4))
         for product in selected_products:
-            quantity = random.randint(1, 3)
+            quantity = random.randint(1, 5)
             unit_price = float(product.sale_price)
             line_total = unit_price * quantity
             sale_item = models.SaleItem(
@@ -178,23 +156,21 @@ def seed_sales(db: Session, customers: list[models.Customer], products: list[mod
 
 
 def ensure_financial_entries(db: Session) -> list[models.FinancialEntry]:
-    existing = db.query(models.FinancialEntry).all()
-    if existing:
-        return existing
-
+    db.query(models.FinancialEntry).delete()
+    db.commit()
     created: list[models.FinancialEntry] = []
     categories_receita = ["Vendas", "Servicos", "Outros"]
     categories_despesa = ["Aluguel", "Salarios", "Material", "Contas"]
     now = datetime.utcnow()
 
-    for i in range(12):
+    for i in range(50):
         if i % 3 == 0:
             entry_type = models.EntryType.RECEITA
-            category = categories_receita[i % len(categories_receita)]
+            category = random.choice(categories_receita)
             amount = round(random.uniform(50, 1000), 2)
         else:
             entry_type = models.EntryType.DESPESA
-            category = categories_despesa[i % len(categories_despesa)]
+            category = random.choice(categories_despesa)
             amount = round(random.uniform(20, 800), 2)
 
         entry = models.FinancialEntry(
@@ -202,7 +178,7 @@ def ensure_financial_entries(db: Session) -> list[models.FinancialEntry]:
             type=entry_type,
             category=category,
             amount=amount,
-            notes=f"Seed entry {i}",
+            notes=fake.sentence(nb_words=6),
             created_at=now - timedelta(days=i),
             updated_at=now - timedelta(days=i),
         )
@@ -221,7 +197,8 @@ def main() -> None:
         products = ensure_products(db)
         customers = ensure_customers(db)
         seed_sales(db, customers, products)
-    print("Banco inicializado com dados de teste.")
+        ensure_financial_entries(db)
+    print("Banco inicializado com 50 registros em cada tabela principal.")
 
 
 if __name__ == "__main__":

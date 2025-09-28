@@ -76,6 +76,10 @@ export function fetchCustomers() {
   return request("/customers");
 }
 
+export function fetchCustomer(id) {
+  return request(`/customers/${id}`);
+}
+
 export function createCustomerPayment(payload) {
   return request(`/customer-payments`, {
     method: "POST",

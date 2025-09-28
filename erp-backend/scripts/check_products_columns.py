@@ -1,14 +1,13 @@
-import sqlite3
-from app.database import get_sqlite_path
 
-sqlite_path = get_sqlite_path()
-if sqlite_path is None:
-    raise SystemExit('This script expects a local sqlite DB; run against Postgres differently')
-p = str(sqlite_path)
-conn=sqlite3.connect(p)
-cur=conn.cursor()
-cur.execute("PRAGMA table_info('products')")
-rows=cur.fetchall()
-for r in rows:
-    print(r)
-conn.close()
+"""
+Verifica colunas de `products` usando SQLAlchemy/Postgres. Para alterações de esquema,
+use Alembic (migrations). Este script apenas imprime a lista de colunas.
+"""
+
+from app.database import engine
+from sqlalchemy import text
+
+with engine.connect() as conn:
+    res = conn.execute(text("SELECT column_name, data_type FROM information_schema.columns WHERE table_name='products' AND table_schema='public' ORDER BY ordinal_position")).fetchall()
+    for r in res:
+        print(r)

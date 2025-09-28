@@ -1,0 +1,26 @@
+# Development Dockerfile for frontend (Vite)
+# Uses an image with Node.js and installs dependencies.
+# Mounts project directory from host for hot-reload. Keep node_modules inside container.
+
+FROM node:20-alpine
+
+# Create app directory
+WORKDIR /app
+
+# Install system deps for building native modules if needed
+RUN apk add --no-cache python3 make g++
+
+# Copy package manifests first for better caching
+COPY package.json package-lock.json* ./
+
+# Install dependencies
+RUN npm ci --no-audit --prefer-offline
+
+# Copy rest of the app (this will be overridden by the bind mount during development)
+COPY . ./
+
+# Expose Vite dev server port
+EXPOSE 5173
+
+# Default command is provided by docker-compose (npm run dev -- --host 0.0.0.0)
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDate } from "../lib/dateFormat";
 import { fetchExpenses, createExpense, updateExpense, deleteExpense, fetchCategories, createCategory } from "../lib/api";
 import ExpenseModal from "./ExpenseModal";
 import CashboxModal from "./CashboxModal";
@@ -14,6 +15,12 @@ export default function ExpensesView({ entries = [], loading = false, onDelete =
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [cashboxModalOpen, setCashboxModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const [confirm, ConfirmElement] = useConfirm();
+
+  const pad = (n) => n.toString().padStart(2, '0');
+  const localYMD = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
   useEffect(() => setItems(entries), [entries]);
 
@@ -63,14 +70,15 @@ export default function ExpensesView({ entries = [], loading = false, onDelete =
       name: item.name,
       amount: (item.amount || 0).toFixed(2),
       category: item.category,
-      date: item.date ? item.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      date: item.date ? (item.date.slice ? item.date.slice(0,10) : localYMD(new Date(item.date))) : localYMD(new Date()),
       notes: item.notes || "",
     });
     setModalOpen(true);
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Confirma exclusão?')) return;
+    const ok = await confirm({ title: 'Confirmar exclusão', message: 'Confirma exclusão da despesa?', confirmLabel: 'Excluir', cancelLabel: 'Cancelar' });
+    if (!ok) return;
     try {
       await deleteExpense(id);
       setItems((cur) => cur.filter((it) => it.id !== id));
@@ -111,7 +119,7 @@ export default function ExpensesView({ entries = [], loading = false, onDelete =
                   <td className="px-4 py-3">{it.name}</td>
                   <td className="px-4 py-3 text-right">R$ {Number(it.amount).toFixed(2)}</td>
                   <td className="px-4 py-3">{it.category}</td>
-                  <td className="px-4 py-3">{it.date ? new Date(it.date).toLocaleDateString() : ''}</td>
+                  <td className="px-4 py-3">{it.date ? formatDate(it.date) : ''}</td>
                   <td className="px-4 py-3 text-center">
                     <button onClick={() => handleEdit(it)} className="mr-2 text-sm text-neutral-300 hover:text-text-light dark:hover:text-text-dark">Editar</button>
                     <button onClick={() => handleDelete(it.id)} className="text-sm text-red-400 hover:text-red-300">Excluir</button>
@@ -134,6 +142,7 @@ export default function ExpensesView({ entries = [], loading = false, onDelete =
           onCreateCategory={handleCreateCategory}
         />
       )}
+      {ConfirmElement}
 
       {/* Cashbox creation removed from this view — kept the open/close modal on the 'Caixa' button */}
 

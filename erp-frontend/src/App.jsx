@@ -107,7 +107,7 @@ export default function App() {
     products: products.length,
     customers: customers.length,
     sales: sales.length,
-    fiado: sales.reduce((acc, sale) => acc + Number(sale.total_fiado || 0), 0),
+    fiado: sales.reduce((acc, sale) => acc + Number(sale.total_fiado_pending ?? sale.total_fiado ?? 0), 0),
   }), [products, customers, sales]);
 
   const handleCreateProduct = async (values, imageFiles) => {

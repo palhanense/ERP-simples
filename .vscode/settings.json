@@ -1,3 +1,5 @@
 {
-    "chatgpt.openOnStartup": true
+    "chatgpt.openOnStartup": true,
+    "python.defaultInterpreterPath": "C:/Users/abmme/OneDrive/Desktop/ERP sistema/.venv/Scripts/python.exe",
+    "python.analysis.autoImportCompletions": true
 }

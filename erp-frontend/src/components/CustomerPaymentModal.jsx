@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import { createCustomerPayment, searchCustomersLocal } from "../lib/api";
+import { createCustomerPayment, searchCustomersLocal, fetchCustomer } from "../lib/api";
 import { digitsFromString, formatFromDigits, numberFromDigits, digitsFromValue, defaultLocale, defaultCurrency } from "../lib/format";
 
 export default function CustomerPaymentModal({ customers = [], onClose, onSaved }) {
@@ -7,7 +7,7 @@ export default function CustomerPaymentModal({ customers = [], onClose, onSaved 
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [amountDigits, setAmountDigits] = useState(digitsFromValue("") || "");
   const [method, setMethod] = useState("dinheiro");
-  const [notes, setNotes] = useState("");
+  const [currentDebt, setCurrentDebt] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [suggestionIndex, setSuggestionIndex] = useState(-1);
@@ -17,6 +17,19 @@ export default function CustomerPaymentModal({ customers = [], onClose, onSaved 
 
   useEffect(() => {
     if (selectedCustomer) setQuery(selectedCustomer.name || "");
+    // fetch current debt when selecting a customer
+    (async () => {
+      if (selectedCustomer && selectedCustomer.id) {
+        try {
+          const data = await fetchCustomer(selectedCustomer.id);
+          setCurrentDebt(data.balance_due ?? 0);
+        } catch (e) {
+          setCurrentDebt(null);
+        }
+      } else {
+        setCurrentDebt(null);
+      }
+    })();
   }, [selectedCustomer]);
 
   useEffect(() => {
@@ -62,7 +75,7 @@ export default function CustomerPaymentModal({ customers = [], onClose, onSaved 
     }
     setLoading(true);
     try {
-      const payload = { customer_id: selectedCustomer.id, amount: numericAmount, method, notes };
+    const payload = { customer_id: selectedCustomer.id, amount: numericAmount, method };
       const res = await createCustomerPayment(payload);
       onSaved && onSaved(res);
       onClose && onClose();
@@ -126,10 +139,12 @@ export default function CustomerPaymentModal({ customers = [], onClose, onSaved 
           </select>
         </div>
 
-        <div className="mb-3">
-          <label className="block text-sm text-neutral-600">Notas (opcional)</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2" />
-        </div>
+        {selectedCustomer && (
+          <div className="mb-3 rounded p-3 bg-yellow-50 border border-yellow-200">
+            <div className="text-xs text-yellow-700 uppercase">Débito atual</div>
+            <div className="mt-1 text-lg font-semibold">{currentDebt === null ? '...' : `R$ ${Number(currentDebt).toFixed(2)}`}</div>
+          </div>
+        )}
 
         {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
 

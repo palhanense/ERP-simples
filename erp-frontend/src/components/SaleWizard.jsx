@@ -1,5 +1,5 @@
 ﻿
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -11,7 +11,7 @@ import { clsx } from "clsx";
 
 import CustomerCreateModal from "./CustomerCreateModal";
 import { digitsFromValue, digitsFromString, formatFromDigits, numberFromDigits, defaultLocale, defaultCurrency } from "../lib/format";
-import { createCustomer, createSale, resolveMediaUrl } from "../lib/api";
+import { createCustomer, createSale, resolveMediaUrl, fetchCustomer } from "../lib/api";
 
 const paymentMethods = [
   { value: "dinheiro", label: "Dinheiro" },
@@ -91,19 +91,23 @@ function formatCurrency(value) {
     currency: "BRL",
   });
 }
+
 function computeItemTotals(item) {
   const quantity = Number(item.quantity || 0);
   const unitPrice = toFiniteAmount(item.unitPrice);
-  const base = unitPrice * quantity;
   let discountValue = 0;
+  let base = unitPrice * quantity;
 
   if (item.discountEnabled) {
     const raw = parseAmount(item.discountValue);
     if (Number.isFinite(raw)) {
       if (item.discountMode === "percent") {
         const percent = Math.min(Math.max(raw, 0), 100);
-        discountValue = (percent / 100) * base;
+        // desconto por unidade
+        const unitDiscount = (percent / 100) * unitPrice;
+        discountValue = unitDiscount * quantity;
       } else if (item.discountMode === "value") {
+        // desconto total no item, limitado ao total
         discountValue = Math.min(Math.max(raw, 0), base);
       }
     }
@@ -159,13 +163,34 @@ export default function SaleWizard({
   onClose,
   onSaleCreated,
 }) {
+  // Campo débito do cliente (fiado)
+  const [customerDebit, setCustomerDebit] = useState(null);
+  const lastCustomerIdRef = useRef(null);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  useEffect(() => {
+    async function fetchDebit() {
+      if (selectedCustomer && selectedCustomer.id && lastCustomerIdRef.current !== selectedCustomer.id) {
+        lastCustomerIdRef.current = selectedCustomer.id;
+        try {
+          const data = await fetchCustomer(selectedCustomer.id);
+          setCustomerDebit(data.balance_due ?? null);
+        } catch (err) {
+          setCustomerDebit(null);
+        }
+      } else if (!selectedCustomer) {
+        setCustomerDebit(null);
+        lastCustomerIdRef.current = null;
+      }
+    }
+    fetchDebit();
+  }, [selectedCustomer]);
   const [step, setStep] = useState(0);
   const [localCustomers, setLocalCustomers] = useState(customers);
   useEffect(() => {
     setLocalCustomers(customers);
   }, [customers]);
   const [customerSearch, setCustomerSearch] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  // removed duplicate selectedCustomer declaration
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
 
   const [items, setItems] = useState([]);
@@ -211,6 +236,7 @@ export default function SaleWizard({
     });
   }, [items]);
 
+
   const saleSummary = useMemo(() => {
     const subtotal = itemsWithTotals.reduce(
       (acc, item) => acc + item.totals.base,
@@ -235,6 +261,8 @@ export default function SaleWizard({
       }
     }
 
+    // Corrigir: garantir que o desconto geral nunca ultrapasse o total após descontos de itens
+    overallValue = Math.min(overallValue, afterItems);
     const total = Math.max(afterItems - overallValue, 0);
 
     return {
@@ -481,6 +509,13 @@ export default function SaleWizard({
         </div>
 
         <main className="flex-1 overflow-auto px-8 py-6">
+          {/* Campo Débito atual para pagamento fiado */}
+          {step === 2 && payments.some((p) => p.method === "fiado" && p.enabled) && selectedCustomer && (
+            <div className="mb-4 flex items-center gap-4 p-4 rounded-xl border border-yellow-300 bg-yellow-50 text-yellow-900 dark:border-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-200">
+              <span className="font-semibold uppercase tracking-widest text-xs">Débito atual:</span>
+              <span className="text-lg font-bold">{customerDebit === null ? "..." : `R$ ${Number(customerDebit).toFixed(2)}`}</span>
+            </div>
+          )}
           {success ? (
             <SuccessState sale={success} onReset={resetWizard} onClose={onClose} />
           ) : step === 0 ? (
@@ -538,8 +573,10 @@ export default function SaleWizard({
               </div>
               <aside className="lg:col-span-1">
                 <div className="space-y-3">
-                  <SummaryTile label="Subtotal" value={saleSummary.subtotal} />
-                  <SummaryTile label="Desc." value={saleSummary.itemDiscount} />
+                  <div className="flex gap-2">
+                    <SummaryTile label="Subtotal" value={saleSummary.subtotal} compact />
+                    <SummaryTile label="Desc." value={saleSummary.itemDiscount} compact />
+                  </div>
                   <SummaryTile label="Total" value={saleSummary.total} emphasis />
                   <div className="mt-2 rounded-lg border border-neutral-200/60 bg-neutral-50 p-3 dark:border-white/10 dark:bg-surface-dark">
                     <div className="flex items-center justify-between">
@@ -813,16 +850,15 @@ function ProductStep({ items, setItems, products, onOpenProductModal, showSummar
           </button>
         </div>
       )}
-
-      <div className="overflow-hidden rounded-3xl border borde
-r-white/20">
+      
+      <div className="overflow-hidden rounded-3xl border border-white/20">
         <table className="min-w-full divide-y divide-white/10 text-sm">
           <thead className="bg-neutral-100 text-xs uppercase tracking-[0.25em] text-neutral-500 dark:bg-white/5 dark:text-neutral-400">
             <tr>
               <th className="px-4 py-3 text-left">SKU</th>
               <th className="px-4 py-3 text-left">Produto</th>
               <th className="px-4 py-3 text-left">Unit.</th>
-              <th className="px-4 py-3 text-left">Qtd</th>
+              <th className="px-4 py-3 text-left">Estoque</th>
               <th className="px-4 py-3 text-left">Desc.</th>
               <th className="px-4 py-3 text-right">Subt.</th>
               <th className="px-4 py-3"></th>
@@ -843,28 +879,9 @@ r-white/20">
               return (
                 <tr key={item.productId} className="bg-white text-neutral-700 dark:bg-surface-dark/30 dark:text-neutral-200">
                   <td className="px-4 py-3">{item.sku}</td>
-                      <td className="px-4 py-3">{item.name}</td>
-                      <td className="px-4 py-3">{formatCurrency(item.unitPrice)}</td>
-                      <td className="px-4 py-3">
-                    <div className="space-y-1">
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(event) =>
-                              updateItem(index, {
-                                quantity: event.target.valueAsNumber || 1,
-                              })
-                            }
-                            className="w-16 rounded-xl border border-neutral-300 bg-white px-2 py-2 text-sm text-neutral-900 focus:border-neutral-500 focus:outline-none dark:border-white/20 dark:bg-transparent dark:text-white dark:focus:border-white/60"
-                          />
-                      {quantityError && (
-                        <p className="text-xs text-red-300">
-                          Estoque maximo: {item.maxQuantity}
-                        </p>
-                      )}
-                    </div>
-                  </td>
+                  <td className="px-4 py-3">{item.name}</td>
+                  <td className="px-4 py-3">{formatCurrency(item.unitPrice)}</td>
+                  <td className="px-4 py-3">{Number.isFinite(item.maxQuantity) ? item.maxQuantity : '-'}</td>
                   <td className="px-4 py-3">
                     <div className="space-y-2">
                       <label className="flex items-center gap-2 text-xs text-neutral-400">
@@ -1029,7 +1046,7 @@ function PaymentStep({
         <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold uppercase tracking-[0.2em] dark:border-white/20 dark:bg-surface-dark/20">
           <span>Total</span>
           <div className="flex items-baseline gap-4">
-            <span className={Math.abs(paymentsState.diff) <= 0.05 ? "text-emerald-300" : "text-red-300"}>
+            <span className={Math.abs(paymentsState.diff) <= 0.05 ? "text-emerald-300" : "text-red-600"}>
               {formatCurrency(paymentsState.diff)}
             </span>
             <span className="text-sm text-neutral-400">Saldo</span>

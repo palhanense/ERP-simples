@@ -1,4 +1,5 @@
 ﻿import { useState } from "react";
+import useConfirm from '../hooks/useConfirm';
 import { uploadProductPhotos, deleteProductPhoto, updateProduct } from "../lib/api";
 import { digitsFromValue, digitsFromString, formatFromDigits, numberFromDigits, defaultLocale, defaultCurrency } from "../lib/format";
 
@@ -31,6 +32,7 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
   const [removedPhotos, setRemovedPhotos] = useState([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [confirm, ConfirmElement] = useConfirm();
 
   // Excluir foto existente
   const handleRemovePhoto = (photo) => {
@@ -242,13 +244,11 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
                 type="number"
                 min="0"
                 value={form.stock}
-                onChange={(event) => {
+                onChange={async (event) => {
                   const newValue = event.target.value;
                   if (newValue !== form.stock) {
-                    const confirmMsg = `Tem certeza que deseja alterar o estoque de ${form.stock} para ${newValue}? Essa ação é sensível e pode impactar o controle de produtos.`;
-                    if (window.confirm(confirmMsg)) {
-                      handleChange("stock", newValue);
-                    }
+                    const ok = await confirm({ title: 'Confirmar alteração de estoque', message: `Tem certeza que deseja alterar o estoque de ${form.stock} para ${newValue}? Essa ação é sensível e pode impactar o controle de produtos.`, confirmLabel: 'Sim, alterar', cancelLabel: 'Cancelar' });
+                    if (ok) handleChange("stock", newValue);
                   } else {
                     handleChange("stock", newValue);
                   }
@@ -323,6 +323,17 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
               {loading ? "Salvando..." : "Salvar"}
             </button>
           </div>
+          {confirmOpen && (
+            <ConfirmModal
+              open={confirmOpen}
+              title="Confirmar alteração de estoque"
+              message={`Tem certeza que deseja alterar o estoque de ${form.stock} para ${pendingStockValue}? Essa ação é sensível e pode impactar o controle de produtos.`}
+              confirmLabel="Sim, alterar"
+              cancelLabel="Cancelar"
+              onConfirm={() => { handleChange('stock', pendingStockValue); setConfirmOpen(false); setPendingStockValue(null); }}
+              onCancel={() => { setConfirmOpen(false); setPendingStockValue(null); }}
+            />
+          )}
         </form>
       </div>
     </div>

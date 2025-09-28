@@ -1,61 +1,46 @@
-"""
-Script para adicionar/retrocompatibilizar a coluna `stock` em um banco SQLite local.
-Para Postgres, aplique mudanças de esquema via Alembic e rode backfills usando SQLAlchemy.
+"""Backfill `stock` for products using SQLAlchemy.
+
+This script will only perform the backfill. If the `stock` column is missing
+it will instruct you to add it via Alembic (Postgres) and exit.
 """
 
-import sqlite3
-import json
-from app.database import get_sqlite_path
+from app.database import SessionLocal, engine
+from app import models
+from sqlalchemy import inspect
 
 
 def main():
-    sqlite_path = get_sqlite_path()
-    if sqlite_path is None:
-        raise SystemExit("This script expects a local sqlite DB; run schema changes via Alembic for Postgres")
+    insp = inspect(engine)
+    cols = [c["name"] for c in insp.get_columns("products")]
+    print("product columns:", cols)
+    if "stock" not in cols:
+        raise SystemExit("Column 'stock' not found. Apply an Alembic migration to add it, then run this script to backfill.")
 
-    p = str(sqlite_path)
-    conn = sqlite3.connect(p)
-    cur = conn.cursor()
-
-    # check existing columns
-    cur.execute("PRAGMA table_info('products')")
-    cols = [r[1] for r in cur.fetchall()]
-    print('columns before:', cols)
-    if 'stock' not in cols:
-        cur.execute("ALTER TABLE products ADD COLUMN stock INTEGER DEFAULT 0")
-        print('added column stock')
-    else:
-        print('stock column exists')
-
-    # try backfill from extra_attributes if empty
-    cur.execute("SELECT id, extra_attributes, stock FROM products")
-    rows = cur.fetchall()
     updated = 0
-    for pid, extra, stock in rows:
-        if stock and stock > 0:
-            continue
-        try:
-            if extra:
-                obj = json.loads(extra)
-                for key in ('stock', 'estoque', 'available_stock'):
-                    if key in obj:
-                        val = obj[key]
-                        try:
-                            n = int(val)
-                            cur.execute('UPDATE products SET stock=? WHERE id=?', (n, pid))
-                            updated += 1
-                            break
-                        except Exception:
-                            continue
-        except Exception:
-            pass
+    with SessionLocal() as session:
+        products = session.query(models.Product).all()
+        for p in products:
+            try:
+                if getattr(p, "stock", None) and int(p.stock) > 0:
+                    continue
+            except Exception:
+                pass
 
-    conn.commit()
-    print('backfilled rows:', updated)
-    cur.execute("PRAGMA table_info('products')")
-    print('columns after:', [r[1] for r in cur.fetchall()])
-    conn.close()
+            extra = p.extra_attributes or {}
+            for key in ("stock", "estoque", "available_stock"):
+                if key in extra:
+                    try:
+                        n = int(extra[key])
+                        p.stock = n
+                        updated += 1
+                        break
+                    except Exception:
+                        continue
+
+        session.commit()
+
+    print("backfilled rows:", updated)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

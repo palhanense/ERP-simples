@@ -1,12 +1,11 @@
+
 """
-Script para checar tabelas no banco de dados usando SQLAlchemy.
-Funciona tanto com SQLite local quanto com Postgres quando o app estiver
-configurado com `DATABASE_URL`. Retorna contagens e até 3 linhas de amostra
-por tabela.
+Script para checar tabelas no banco de dados usando SQLAlchemy/Postgres.
+Retorna contagens e até 3 linhas de amostra por tabela.
 """
 
 import json
-from app.database import SessionLocal, get_sqlite_path
+from app.database import SessionLocal
 from app import models
 
 session = SessionLocal()
@@ -21,7 +20,23 @@ try:
             # serialize simple attrs (avoid ORM internals)
             serialized = []
             for r in rows:
-                d = {k: getattr(r, k) for k in r.__dict__ if not k.startswith('_sa_')}
+                d = {}
+                for k in r.__dict__:
+                    if k.startswith('_sa_'):
+                        continue
+                    v = getattr(r, k)
+                    # coerce decimals and datetimes to primitives for JSON
+                    try:
+                        from decimal import Decimal
+                        from datetime import datetime
+
+                        if isinstance(v, Decimal):
+                            v = float(v)
+                        elif isinstance(v, datetime):
+                            v = v.isoformat()
+                    except Exception:
+                        pass
+                    d[k] = v
                 serialized.append(d)
             result[name] = {'count': count, 'rows': serialized}
         except Exception as e:
