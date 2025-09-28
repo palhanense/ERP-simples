@@ -17,6 +17,9 @@ services:
       DATABASE_URL: "postgresql+psycopg://erp:Eme02287523375@db:5432/erp"
       DEV: "1"
       MEDIA_ROOT: "/app/data/product_photos"
+      # JWT / auth settings - override in production
+      SECRET_KEY: "change-me-in-env"
+      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
     depends_on:
       - db
     volumes:

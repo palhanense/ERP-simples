@@ -3,13 +3,17 @@ from typing import Optional
 
 from passlib.context import CryptContext
 from jose import JWTError, jwt
+import os
 
 from app import schemas
 
-# Should be read from env in production
-SECRET_KEY = "change-me-in-env"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+# Read secrets from environment with sensible dev defaults
+SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-env")
+ALGORITHM = os.environ.get("JWT_ALGORITHM", "HS256")
+try:
+    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+except Exception:
+    ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

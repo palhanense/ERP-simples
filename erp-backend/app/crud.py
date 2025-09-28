@@ -9,6 +9,7 @@ from sqlalchemy import func
 from app.services.image_processing import remove_product_photos
 
 from app import models, schemas
+from sqlalchemy.exc import IntegrityError
 
 
 # Produtos
@@ -181,7 +182,12 @@ def create_user(db: Session, email: str, password_hash: str, tenant_id: int, ful
         raise ValueError("Email already registered")
     u = models.User(email=email, password_hash=password_hash, tenant_id=tenant_id, full_name=full_name, role=role)
     db.add(u)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        # Normalize duplicate email / constraint violation to a ValueError
+        raise ValueError("Email already registered") from exc
     db.refresh(u)
     return u
 
