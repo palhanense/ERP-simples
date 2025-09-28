@@ -13,7 +13,7 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
   const [showModal, setShowModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState("");
-  // default period: from first day of current month to today
+  // período padrão: do primeiro dia do mês atual até hoje
   const formatPad = (n) => n.toString().padStart(2, "0");
   const todayString = () => {
     const now = new Date();
@@ -50,7 +50,7 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
     setShowModal(false);
   };
 
-  // small date picker helper using native inputs (pattern used elsewhere)
+  // pequeno seletor de período usando inputs nativos (padrão usado em outras telas)
   function PeriodPicker({ fromDate, toDate, onChange }) {
     return (
       <div className="flex items-center gap-2">
@@ -70,7 +70,7 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
       </div>
     );
   }
-  // Summary chip supports two formats: 'currency' (default) or 'number'
+  // O componente de resumo suporta dois formatos: 'currency' (padrão) ou 'number'
   function SummaryChip({ label, value, format = "currency" }) {
     let display;
     if (typeof value === "number") {
@@ -111,12 +111,12 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
   }
 
   useEffect(() => {
-    // ensure toDate is not earlier than fromDate
+    // garante que toDate não seja anterior a fromDate
     if (fromDate && toDate && toDate < fromDate) {
       setToDate(fromDate);
       return;
     }
-    // fetch report from backend with filters
+    // busca relatório no backend com os filtros
     (async () => {
       setLocalLoading(true);
       setError("");
@@ -132,7 +132,7 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
     })();
   }, [products, fromDate, toDate]);
 
-  // compute local totals from filtered products: count, total cost (cost_price * stock), total sale (sale_price * stock)
+  // calcula totais locais a partir dos produtos filtrados: quantidade, custo total (cost_price * estoque), venda total (sale_price * estoque)
   const localTotals = useMemo(() => {
     let totalProducts = (filtered || []).length;
     let totalCost = 0;
@@ -156,7 +156,7 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
       serverTotals && serverTotals.total_sale != null ? serverTotals.total_sale : localTotals.total_sale,
   };
 
-  // Ensure numeric safe values for display (avoid mixing ?? and || inside JSX)
+  // Garante valores numéricos seguros para exibição (evita misturar ?? e || dentro do JSX)
   const totalProductsNum = Number(
     displayedTotals.total_products != null ? displayedTotals.total_products : (filtered.length || 0)
   ) || 0;

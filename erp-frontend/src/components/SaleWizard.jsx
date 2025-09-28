@@ -12,6 +12,7 @@ import { clsx } from "clsx";
 import CustomerCreateModal from "./CustomerCreateModal";
 import { digitsFromValue, digitsFromString, formatFromDigits, numberFromDigits, defaultLocale, defaultCurrency } from "../lib/format";
 import { createCustomer, createSale, resolveMediaUrl, fetchCustomer } from "../lib/api";
+import { useCashbox } from "../contexts/CashboxContext";
 
 const paymentMethods = [
   { value: "dinheiro", label: "Dinheiro" },
@@ -163,6 +164,7 @@ export default function SaleWizard({
   onClose,
   onSaleCreated,
 }) {
+  const { current: openCashbox } = useCashbox();
   // Campo débito do cliente (fiado)
   const [customerDebit, setCustomerDebit] = useState(null);
   const lastCustomerIdRef = useRef(null);
@@ -396,6 +398,10 @@ export default function SaleWizard({
   };
 
   const handleFinalizeSale = async () => {
+    if (!openCashbox || !(openCashbox.opened_at && !openCashbox.closed_at)) {
+      alert('Não é possível efetuar venda sem caixa aberto. Abra o caixa antes de registrar vendas.');
+      return;
+    }
     setSubmitting(true);
     setError("");
 

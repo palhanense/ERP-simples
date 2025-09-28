@@ -43,16 +43,24 @@ async function request(path, options = {}) {
         detail = await response.text().catch(() => detail);
       }
 
-  const err = new Error(detail || `Request failed with status ${response.status}`);
-  // attach HTTP status for callers that want to specialize behavior
-  err.status = response.status;
-  throw err;
+      const err = new Error(detail || `Request failed with status ${response.status}`);
+      // attach HTTP status for callers that want to specialize behavior
+      err.status = response.status;
+      throw err;
     }
 
     const isJson = (response.headers.get("Content-Type") || "").includes(
       "application/json"
     );
     return isJson ? response.json() : response.text();
+  } catch (err) {
+    // Normalize aborts/timeouts to a clear error message so UI can show user-friendly text
+    if (err && (err.name === "AbortError" || err.code === "ABORT_ERR")) {
+      const timeoutErr = new Error("Requisição expirada (timeout). Tente novamente mais tarde.");
+      timeoutErr.code = "ETIMEOUT";
+      throw timeoutErr;
+    }
+    throw err;
   } finally {
     clearTimeout(timeout);
   }

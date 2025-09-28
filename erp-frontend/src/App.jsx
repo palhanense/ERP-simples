@@ -3,6 +3,7 @@ import { ArrowPathIcon, MoonIcon, SunIcon } from "@heroicons/react/24/outline";
 import { clsx } from "clsx";
 
 import NavigationTabs from "./components/NavigationTabs";
+import { CashboxProvider } from "./contexts/CashboxContext";
 // HighlightRow removed (metrics moved to HomeReports/Fiado)
 import ProductsView from "./components/ProductsView";
 import CustomersView from "./components/CustomersView";
@@ -207,6 +208,7 @@ export default function App() {
   };
 
   return (
+    <CashboxProvider>
     <div className="min-h-full bg-surface-light text-text-light transition-colors duration-300 ease-out dark:bg-surface-dark dark:text-text-dark">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-6 lg:px-10 xl:px-16">
         <header className="flex items-center justify-between">
@@ -349,8 +351,9 @@ export default function App() {
           error={customerModalError}
         />
       )}
-
+      
     </div>
+    </CashboxProvider>
   );
 }
 
