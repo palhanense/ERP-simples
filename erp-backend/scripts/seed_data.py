@@ -1,18 +1,14 @@
 from __future__ import annotations
 import random
-import sys
 from datetime import datetime, timedelta
-from pathlib import Path
-
-sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from sqlalchemy.orm import Session
 
 from app import models
 from app.database import SessionLocal, init_db
 
-from faker import Faker  # Keeping this line as it is necessary for the code to function
-fake = Faker('pt_BR')  # Keeping this line as it is necessary for the code to function
+from faker import Faker
+fake = Faker('pt_BR')
 
 PRODUCTS = [
     {
@@ -201,6 +197,10 @@ def main() -> None:
     print("Banco inicializado com 50 registros em cada tabela principal.")
 
 
-if __name__ == "__main__":
+def run() -> None:
     random.seed(42)
     main()
+
+
+if __name__ == "__main__":
+    run()

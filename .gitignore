@@ -9,6 +9,9 @@ erp-backend/data/erp.db
 erp-backend/venv/
 erp-backend/.venv/
 
+# Ignore accidental editor virtualenv
+.venv2/
+
 # Logs e artefatos
 *.log
 *.zip

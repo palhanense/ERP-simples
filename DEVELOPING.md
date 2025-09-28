@@ -17,6 +17,8 @@ Quickstart (Windows PowerShell)
 2. Install backend requirements (once):
 
    .venv2\Scripts\python.exe -m pip install -r erp-backend\requirements.txt
+   # instalar o pacote em modo editável para desenvolvimento (recomendado)
+   .venv2\Scripts\python.exe -m pip install -e erp-backend
 
 3. Start Postgres (docker-compose):
 
@@ -31,11 +33,11 @@ Quickstart (Windows PowerShell)
 
 5. Seed a default tenant/admin (from inside the backend environment):
 
-   python -m erp_backend.scripts.seed_admin
+   python -m app.scripts.seed_admin
 
-   or run the provided `erp-backend/scripts/seed_admin.py` directly:
+   or (in Docker):
 
-   python erp-backend/scripts/seed_admin.py
+   docker compose exec backend python -m app.scripts.seed_admin
 
 VS Code
 -------
@@ -44,16 +46,7 @@ Set the workspace Python interpreter to `.venv2\Scripts\python.exe` (or your cho
 
 - Ensure the selected interpreter is the venv above (click the interpreter in the status bar).
 - Restart the language server / reload the window (Command Palette: "Developer: Reload Window").
-- Add `erp-backend` to `python.analysis.extraPaths` in `.vscode/settings.json` so the language server can find the `app` package.
-
-Example `.vscode/settings.json` snippet:
-
-``json
-{
-   "python.pythonPath": ".venv2\\Scripts\\python.exe",
-   "python.analysis.extraPaths": ["erp-backend"]
-}
-``
+If you installed the package (`pip install -e erp-backend`) the language server will resolve imports for `app` automatically.
 
 Notes
 -----

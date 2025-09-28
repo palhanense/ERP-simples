@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app
 
+# Install the package in editable mode so `import app` works without PYTHONPATH hacks
+RUN pip install --no-cache-dir -e .
+
 RUN chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 8000

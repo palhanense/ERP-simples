@@ -1,15 +1,10 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.append(str(Path(__file__).resolve().parents[1]))
-
 from app.database import SessionLocal
 from app import models
 
 
-def main() -> None:
+def run() -> None:
     with SessionLocal() as db:
         prod_count = db.query(models.Product).count()
         cust_count = db.query(models.Customer).count()
@@ -23,4 +18,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run()
