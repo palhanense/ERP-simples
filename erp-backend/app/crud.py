@@ -175,6 +175,10 @@ def create_tenant(db: Session, name: str, slug: str) -> models.Tenant:
 
 
 def create_user(db: Session, email: str, password_hash: str, tenant_id: int, full_name: str | None = None, role: models.UserRole = models.UserRole.USER) -> models.User:
+    # Ensure global email uniqueness (Option B)
+    existing = db.query(models.User).filter(models.User.email == email).first()
+    if existing:
+        raise ValueError("Email already registered")
     u = models.User(email=email, password_hash=password_hash, tenant_id=tenant_id, full_name=full_name, role=role)
     db.add(u)
     db.commit()

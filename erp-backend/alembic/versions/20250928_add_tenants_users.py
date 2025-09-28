@@ -18,8 +18,8 @@ def upgrade() -> None:
     op.create_table(
         'tenants',
         sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('name', sa.String(length=255), nullable=False),
-        sa.Column('slug', sa.String(length=100), nullable=False),
+        sa.Column('name', sa.String(length=255), nullable=False, unique=True),
+        sa.Column('slug', sa.String(length=100), nullable=False, unique=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
 
@@ -34,6 +34,8 @@ def upgrade() -> None:
         sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('1')),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
+    # Create a global unique index on email (Option B: email unique across tenants)
+    op.create_index('uq_users_email', 'users', ['email'], unique=True)
 
 
 def downgrade() -> None:

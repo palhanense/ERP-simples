@@ -36,3 +36,9 @@ def decode_access_token(token: str) -> dict:
         return payload
     except JWTError:
         raise
+
+
+def create_token_for_user(user) -> str:
+    """Create a JWT for a given user ORM object. Includes tenant_id and sub (user id)."""
+    data = {"sub": str(user.id), "tenant_id": getattr(user, "tenant_id", None)}
+    return create_access_token(data)

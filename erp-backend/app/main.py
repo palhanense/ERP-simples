@@ -15,7 +15,7 @@ from app.services.image_processing import (
     ImageProcessingError,
     convert_many_to_webp,
 )
-from app.auth import verify_password, create_access_token, decode_access_token
+from app.auth import verify_password, create_token_for_user, decode_access_token
 from sqlalchemy.orm import Session
 from fastapi import Depends, Header
 
@@ -93,7 +93,7 @@ def login_for_access_token(form_data: dict, db: Session = Depends(get_db)):
     user = crud.get_user_by_email(db, username)
     if not user or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = create_access_token({"sub": str(user.id), "tenant_id": user.tenant_id})
+    token = create_token_for_user(user)
     return {"access_token": token, "token_type": "bearer"}
 
 
@@ -106,7 +106,10 @@ def read_current_user(authorization: str | None = Header(None), db: Session = De
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid authorization header")
     payload = decode_access_token(token)
-    user_id = int(payload.get("sub"))
+    try:
+        user_id = int(payload.get("sub"))
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
     user = crud.get_user(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
