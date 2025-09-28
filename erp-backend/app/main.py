@@ -15,7 +15,7 @@ from app.services.image_processing import (
     ImageProcessingError,
     convert_many_to_webp,
 )
-from app.auth import verify_password, create_token_for_user, decode_access_token
+from app.auth import verify_password, create_token_for_user, decode_access_token, get_password_hash
 from sqlalchemy.orm import Session
 from fastapi import Depends, Header
 
