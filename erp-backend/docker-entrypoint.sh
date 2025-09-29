@@ -1,26 +1,28 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
-# Wait for Postgres to be ready (if using postgres)
-if [[ "${DATABASE_URL:-}" == postgresql* || "${DATABASE_URL:-}" == postgresql+* ]]; then
-  # parse host and port roughly
-  host=$(echo "$DATABASE_URL" | sed -n 's#.*@\([^:/]*\).*#\1#p') || true
-  port=5432
-  if [ -n "$host" ]; then
-    echo "Waiting for Postgres on $host:$port..."
-    until nc -z "$host" "$port"; do
-      sleep 0.5
-    done
-  fi
-fi
+# Minimal, POSIX-compatible entrypoint with LF line endings only
+# Wait for Postgres to be ready (if DATABASE_URL points to postgres)
+case "${DATABASE_URL:-}" in
+  postgresql*|postgresql+*)
+    host=$(echo "$DATABASE_URL" | sed -n 's#.*@\([^:/]*\).*#\1#p' || true)
+    port=5432
+    if [ -n "$host" ]; then
+      echo "Waiting for Postgres on $host:$port..."
+      while ! nc -z "$host" "$port"; do
+        sleep 0.5
+      done
+    fi
+    ;;
+  *)
+    ;;
+esac
 
-# Ensure data directories exist
 mkdir -p /app/data /app/data/product_photos
 
-# Run lightweight DB init via app code (this will create tables if needed)
-python -c "from app.database import init_db; init_db()"
+# Initialize DB (best-effort)
+python -c "from app.database import init_db; init_db()" || true
 
-# Start Uvicorn
 if [ "${DEV:-}" = "1" ] || [ "${DEV:-}" = "true" ]; then
   echo "Starting Uvicorn in development mode (reload enabled)..."
   exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
