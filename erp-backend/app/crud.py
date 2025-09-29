@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 from decimal import Decimal
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from sqlalchemy.orm import Session, selectinload
@@ -57,8 +58,23 @@ def create_product(db: Session, product_in: schemas.ProductCreate) -> models.Pro
     return db_product
 
 
-def list_products(db: Session, skip: int = 0, limit: int = 100) -> List[models.Product]:
-    return db.query(models.Product).offset(skip).limit(limit).all()
+def list_products(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    sku: str | None = None,
+    name: str | None = None,
+) -> List[models.Product]:
+    q = db.query(models.Product)
+    if sku:
+        # case-insensitive prefix match on SKU (starts with)
+        sku_val = sku.strip()
+        if sku_val:
+            q = q.filter(models.Product.sku.ilike(f"{sku_val}%"))
+    if name:
+        # case-insensitive partial match on name
+        q = q.filter(models.Product.name.ilike(f"%{name}%"))
+    return q.offset(skip).limit(limit).all()
 
 
 def list_products_report(
@@ -67,16 +83,48 @@ def list_products_report(
     to_date: str | None = None,
     skip: int = 0,
     limit: int = 100,
+    sku: str | None = None,
+    name: str | None = None,
+    category: str | None = None,
 ) -> dict:
     """Return a report dict containing filtered products and aggregated totals.
 
     from_date and to_date should be ISO date strings (YYYY-MM-DD) or None.
     """
     q = db.query(models.Product)
-    if from_date:
-        q = q.filter(models.Product.created_at >= from_date)
-    if to_date:
-        q = q.filter(models.Product.created_at <= to_date)
+    # apply sku/name filters early
+    if sku:
+        sku_val = sku.strip()
+        if sku_val:
+            q = q.filter(models.Product.sku.ilike(f"{sku_val}%"))
+    if name:
+        q = q.filter(models.Product.name.ilike(f"%{name}%"))
+    if category:
+        # case-insensitive prefix match on category (starts with)
+        cat_val = category.strip()
+        if cat_val:
+            q = q.filter(models.Product.category.ilike(f"{cat_val}%"))
+    # parse date strings to datetimes to avoid comparing timestamps with strings
+    fd = None
+    td = None
+    try:
+        if from_date:
+            # expect YYYY-MM-DD or full isoformat
+            fd = datetime.fromisoformat(from_date)
+    except Exception:
+        fd = None
+    try:
+        if to_date:
+            # treat to_date as inclusive end of day
+            td_parsed = datetime.fromisoformat(to_date)
+            td = td_parsed + timedelta(days=1) - timedelta(microseconds=1)
+    except Exception:
+        td = None
+
+    if fd:
+        q = q.filter(models.Product.created_at >= fd)
+    if td:
+        q = q.filter(models.Product.created_at <= td)
 
     total_products = q.count()
 
@@ -138,6 +186,7 @@ def list_products_report(
     for prod in products_page:
         prod_total_sold = float(sold_map.get(prod.id, Decimal("0")))
         # create a lightweight dict copy with total_sold included for JSON serialization
+        stock_val = _resolve_stock(prod)
         p_dict = {
             "id": prod.id,
             "name": prod.name,
@@ -146,6 +195,7 @@ def list_products_report(
             "supplier": getattr(prod, "supplier", None),
             "cost_price": float(prod.cost_price or 0),
             "sale_price": float(prod.sale_price or 0),
+            "stock": stock_val,
             "min_stock": prod.min_stock,
             "photos": prod.photos or [],
             "extra_attributes": prod.extra_attributes or {},
@@ -198,6 +248,14 @@ def get_user_by_email(db: Session, email: str) -> models.User | None:
 
 def get_user(db: Session, user_id: int) -> models.User | None:
     return db.query(models.User).filter(models.User.id == user_id).first()
+
+
+def update_user_password(db: Session, db_user: models.User, new_password_hash: str) -> models.User:
+    db_user.password_hash = new_password_hash
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
 
 
 def get_product(db: Session, product_id: int) -> Optional[models.Product]:
@@ -304,6 +362,8 @@ def create_sale(db: Session, sale_in: schemas.SaleCreate) -> models.Sale:
         product = db.get(models.Product, item_in.product_id)
         if not product:
             raise ValueError(f"Produto {item_in.product_id} nao encontrado.")
+        if item_in.quantity > product.stock:
+            raise ValueError(f"Estoque insuficiente para o produto {product.name} (id={product.id}). Solicitado: {item_in.quantity}, disponível: {product.stock}")
         unit_price = (
             Decimal(item_in.unit_price)
             if item_in.unit_price is not None

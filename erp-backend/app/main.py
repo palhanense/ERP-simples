@@ -16,7 +16,7 @@ from app.services.image_processing import (
     ImageProcessingError,
     convert_many_to_webp,
 )
-from app.auth import verify_password, create_token_for_user, decode_access_token, get_password_hash
+from app.auth import verify_password, create_token_for_user, decode_access_token, get_password_hash, needs_rehash
 from sqlalchemy.orm import Session
 from fastapi import Depends, Header
 
@@ -59,9 +59,11 @@ def create_product(
 def read_products(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    sku: str | None = Query(None),
+    name: str | None = Query(None),
     db: Session = Depends(get_db),
 ) -> List[schemas.Product]:
-    return crud.list_products(db, skip=skip, limit=limit)
+    return crud.list_products(db, skip=skip, limit=limit, sku=sku, name=name)
 
 
 @app.get("/reports/products", response_model=schemas.ProductsReport)
@@ -70,9 +72,12 @@ def read_products_report(
     to_date: str | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    sku: str | None = Query(None),
+    name: str | None = Query(None),
+    category: str | None = Query(None),
     db: Session = Depends(get_db),
 ) -> schemas.ProductsReport:
-    report = crud.list_products_report(db, from_date=from_date, to_date=to_date, skip=skip, limit=limit)
+    report = crud.list_products_report(db, from_date=from_date, to_date=to_date, skip=skip, limit=limit, sku=sku, name=name, category=category)
     # Convert Decimal totals to floats for JSON serialization via pydantic
     totals = report["totals"]
     totals_serial = {
@@ -94,6 +99,19 @@ def login_for_access_token(form_data: dict, db: Session = Depends(get_db)):
     user = crud.get_user_by_email(db, username)
     if not user or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    # If the hash parameters changed (e.g. moved to Argon2), re-hash on successful login
+    try:
+        if needs_rehash(user.password_hash):
+            new_hash = get_password_hash(password)
+            try:
+                crud.update_user_password(db, user, new_hash)
+            except Exception:
+                # non-fatal: continue without failing login if rehash/update fails
+                pass
+    except Exception:
+        # ignore rehash check failures
+        pass
+
     token = create_token_for_user(user)
     return {"access_token": token, "token_type": "bearer"}
 

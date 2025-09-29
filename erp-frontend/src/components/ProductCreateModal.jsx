@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useEffect } from "react";
 import useConfirm from '../hooks/useConfirm';
 import { uploadProductPhotos, deleteProductPhoto, updateProduct } from "../lib/api";
 import { digitsFromValue, digitsFromString, formatFromDigits, numberFromDigits, defaultLocale, defaultCurrency } from "../lib/format";
@@ -33,6 +33,7 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const [confirm, ConfirmElement] = useConfirm();
+  const [stockChangeConfirmed, setStockChangeConfirmed] = useState(false);
 
   // Excluir foto existente
   const handleRemovePhoto = (photo) => {
@@ -79,6 +80,27 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
   const handleFileChange = (event) => {
     const newFiles = Array.from(event.target.files || []);
     setFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  // reset stock confirmation when initialData changes (modal opened for different product)
+  useEffect(() => {
+    setStockChangeConfirmed(false);
+  }, [initialData]);
+
+  const handleStockFocus = async (event) => {
+    if (stockChangeConfirmed) return;
+    // ask once whether user intends to change stock
+    const ok = await confirm({
+      title: 'Confirmar alteração de estoque',
+      message: `Tem certeza que deseja alterar o estoque de ${form.stock}? Ao confirmar, você poderá editar o valor.`,
+      confirmLabel: 'Sim, alterar',
+      cancelLabel: 'Cancelar',
+    });
+    if (ok) {
+      setStockChangeConfirmed(true);
+    } else {
+      try { event.target.blur(); } catch (e) {}
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -155,7 +177,7 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
                 type="text"
                 value={form.name}
                 onChange={(event) => handleChange("name", event.target.value)}
-                className="w-full rounded-2xl border border-white/20 bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-white/60 focus:outline-none"
+                className="w-full rounded-2xl border border-black dark:border-white bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-black dark:focus:border-white focus:outline-none"
                 required
               />
             </label>
@@ -165,7 +187,7 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
                 type="text"
                 value={form.supplier}
                 onChange={(event) => handleChange("supplier", event.target.value)}
-                className="w-full rounded-2xl border border-white/20 bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-white/60 focus:outline-none"
+                className="w-full rounded-2xl border border-black dark:border-white bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-black dark:focus:border-white focus:outline-none"
               />
             </label>
           </div>
@@ -176,7 +198,7 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
                 type="text"
                 value={form.sku}
                 onChange={(event) => handleChange("sku", event.target.value)}
-                className="w-full rounded-2xl border border-white/20 bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-white/60 focus:outline-none"
+                className="w-full rounded-2xl border border-black dark:border-white bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-black dark:focus:border-white focus:outline-none"
                 required
               />
             </label>
@@ -186,7 +208,7 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
                 type="text"
                 value={form.category}
                 onChange={(event) => handleChange("category", event.target.value)}
-                className="w-full rounded-2xl border border-white/20 bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-white/60 focus:outline-none"
+                className="w-full rounded-2xl border border-black dark:border-white bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-black dark:focus:border-white focus:outline-none"
               />
             </label>
           </div>
@@ -201,7 +223,7 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
                   const d = digitsFromString(e.target.value);
                   handleCurrencyInput('cost_price', d, setCostDigits);
                 }}
-                className="w-full rounded-2xl border border-white/20 bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-white/60 focus:outline-none"
+                className="w-full rounded-2xl border border-black dark:border-white bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-black dark:focus:border-white focus:outline-none"
               />
             </label>
             <label className="space-y-2 text-sm text-black dark:text-neutral-300">
@@ -214,7 +236,7 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
                   const d = digitsFromString(e.target.value);
                   handleCurrencyInput('sale_price', d, setSaleDigits);
                 }}
-                className="w-full rounded-2xl border border-white/20 bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-white/60 focus:outline-none"
+                className="w-full rounded-2xl border border-black dark:border-white bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-black dark:focus:border-white focus:outline-none"
               />
             </label>
             <div className="space-y-2 text-sm text-black dark:text-neutral-300">
@@ -244,16 +266,11 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
                 type="number"
                 min="0"
                 value={form.stock}
-                onChange={async (event) => {
-                  const newValue = event.target.value;
-                  if (newValue !== form.stock) {
-                    const ok = await confirm({ title: 'Confirmar alteração de estoque', message: `Tem certeza que deseja alterar o estoque de ${form.stock} para ${newValue}? Essa ação é sensível e pode impactar o controle de produtos.`, confirmLabel: 'Sim, alterar', cancelLabel: 'Cancelar' });
-                    if (ok) handleChange("stock", newValue);
-                  } else {
-                    handleChange("stock", newValue);
-                  }
+                onFocus={handleStockFocus}
+                onChange={(event) => {
+                  handleChange("stock", event.target.value);
                 }}
-                className="w-full rounded-2xl border border-white/20 bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-white/60 focus:outline-none"
+                className="w-full rounded-2xl border border-black dark:border-white bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-black dark:focus:border-white focus:outline-none"
               />
             </label>
           </div>
@@ -290,7 +307,7 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
               accept="image/png,image/jpeg,image/webp"
               multiple
               onChange={handleFileChange}
-              className="w-full rounded-2xl border border-white/20 bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-white/60 focus:outline-none"
+              className="w-full rounded-2xl border border-black dark:border-white bg-transparent px-4 py-2 text-sm text-text-light dark:text-text-dark focus:border-black dark:focus:border-white focus:outline-none"
             />
             <p className="text-xs text-neutral-500">Formatos aceitos: JPG, PNG, WEBP (convertidos automaticamente para WEBP).</p>
             {uploadingPhotos && (
@@ -323,17 +340,7 @@ export default function ProductCreateModal({ onClose, onSubmit, loading = false,
               {loading ? "Salvando..." : "Salvar"}
             </button>
           </div>
-          {confirmOpen && (
-            <ConfirmModal
-              open={confirmOpen}
-              title="Confirmar alteração de estoque"
-              message={`Tem certeza que deseja alterar o estoque de ${form.stock} para ${pendingStockValue}? Essa ação é sensível e pode impactar o controle de produtos.`}
-              confirmLabel="Sim, alterar"
-              cancelLabel="Cancelar"
-              onConfirm={() => { handleChange('stock', pendingStockValue); setConfirmOpen(false); setPendingStockValue(null); }}
-              onCancel={() => { setConfirmOpen(false); setPendingStockValue(null); }}
-            />
-          )}
+          {ConfirmElement}
         </form>
       </div>
     </div>

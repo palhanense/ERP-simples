@@ -17,6 +17,12 @@ const resolvedBaseUrl = (() => {
 })();
 
 const baseUrl = resolvedBaseUrl;
+// debug: log resolved base URL so we can see what the client will call
+try {
+  if (typeof console !== 'undefined' && console.debug) console.debug('API baseUrl resolved to', baseUrl);
+} catch (e) {
+  // ignore
+}
 
 async function request(path, options = {}) {
   const controller = new AbortController();
@@ -79,6 +85,9 @@ export function fetchProductsReport(params = {}) {
   const qs = new URLSearchParams();
   if (params.from_date) qs.append('from_date', params.from_date);
   if (params.to_date) qs.append('to_date', params.to_date);
+  if (params.sku) qs.append('sku', params.sku);
+  if (params.name) qs.append('name', params.name);
+  if (params.category) qs.append('category', params.category);
   if (params.skip) qs.append('skip', String(params.skip));
   if (params.limit) qs.append('limit', String(params.limit));
   const path = `/reports/products${qs.toString() ? `?${qs.toString()}` : ''}`;

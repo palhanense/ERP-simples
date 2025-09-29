@@ -1,0 +1,11 @@
+from pathlib import Path
+p=Path('erp-backend/docker-entrypoint.sh')
+b=p.read_bytes()
+print('exists',p.exists())
+print('size',len(b))
+print('first bytes',list(b[:8]))
+print('contains CRLF?', b.find(b'\r\n')!=-1)
+print('contains CR?', b.find(b'\r')!=-1)
+print('starts with BOM?', b.startswith(b'\xef\xbb\xbf'))
+print('\npreview:')
+print(b[:200])

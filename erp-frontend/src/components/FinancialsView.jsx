@@ -59,7 +59,6 @@ export default function FinancialsView({ entries = [], loading = false, onCreate
     <section className="space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Financeiro</h2>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Entradas e saídas financeiras.</p>
         </div>
         <div>

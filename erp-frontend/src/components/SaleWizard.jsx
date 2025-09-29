@@ -108,8 +108,11 @@ function computeItemTotals(item) {
         const unitDiscount = (percent / 100) * unitPrice;
         discountValue = unitDiscount * quantity;
       } else if (item.discountMode === "value") {
-        // desconto total no item, limitado ao total
-        discountValue = Math.min(Math.max(raw, 0), base);
+        // desconto em valor: interpretamos o input como desconto TOTAL para o ítem
+        // (ou seja, usuário digitou o quanto quer descontar do subtotal desse item).
+        // Limitamos o desconto ao total (base).
+        const totalValue = Math.max(raw, 0);
+        discountValue = Math.min(totalValue, base);
       }
     }
   }
@@ -216,6 +219,7 @@ export default function SaleWizard({
   );
 
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [openCashboxWarning, setOpenCashboxWarning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(null);
@@ -343,7 +347,12 @@ export default function SaleWizard({
   const handleAddProduct = (product, quantity) => {
     const maxQuantity = getAvailableStock(product);
     if (Number.isFinite(maxQuantity) && quantity > maxQuantity) {
-      setError(`Quantidade excede o estoque para ${product.name}`);
+      setError(
+        <div className="mb-4 flex items-center gap-4 p-4 rounded-xl border border-red-400 bg-red-100 text-red-900 dark:border-red-700 dark:bg-red-900/20 dark:text-red-200">
+          <span className="font-semibold uppercase tracking-widest text-xs">Quantidade maior que o estoque!</span>
+          <span className="text-sm">Produto <b>{product.name}</b> possui apenas <b>{maxQuantity}</b> unidade(s) disponível(is).</span>
+        </div>
+      );
       return;
     }
 
@@ -399,7 +408,8 @@ export default function SaleWizard({
 
   const handleFinalizeSale = async () => {
     if (!openCashbox || !(openCashbox.opened_at && !openCashbox.closed_at)) {
-      alert('Não é possível efetuar venda sem caixa aberto. Abra o caixa antes de registrar vendas.');
+      // show styled warning modal instead of native alert
+      setOpenCashboxWarning(true);
       return;
     }
     setSubmitting(true);
@@ -539,9 +549,9 @@ export default function SaleWizard({
                 <div>
                   <button
                     onClick={() => setProductModalOpen(true)}
-                    className="rounded-full border border-neutral-900 bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800"
+                    className="inline-flex items-center gap-2 rounded-full border border-neutral-900 bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800"
                   >
-                    Adicionar produto
+                    <PlusIcon className="h-4 w-4 text-white dark:text-black" /> Adicionar produto
                   </button>
                 </div>
                 <div>
@@ -579,14 +589,18 @@ export default function SaleWizard({
               </div>
               <aside className="lg:col-span-1">
                 <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <SummaryTile label="Subtotal" value={saleSummary.subtotal} compact />
-                    <SummaryTile label="Desc." value={saleSummary.itemDiscount} compact />
+                  <div className="flex gap-2 justify-end">
+                    <div className="flex gap-2 items-end">
+                      <SummaryTile label="Subtotal" value={saleSummary.subtotal} compact stacked />
+                      <SummaryTile label="Desc." value={saleSummary.itemDiscount} compact stacked />
+                    </div>
                   </div>
-                  <SummaryTile label="Total" value={saleSummary.total} emphasis />
+                  <div className="flex justify-end">
+                    <SummaryTile label="Total" value={saleSummary.total} emphasis />
+                  </div>
                   <div className="mt-2 rounded-lg border border-neutral-200/60 bg-neutral-50 p-3 dark:border-white/10 dark:bg-surface-dark">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-medium">Desconto geral</div>
+                    <div className="flex items-center justify-end gap-3">
+                      <div className="text-sm font-medium text-right">Desconto geral</div>
                       <label className="flex items-center gap-2 text-sm">
                         <input
                           type="checkbox"
@@ -631,7 +645,7 @@ export default function SaleWizard({
                       )}
                     </div>
 
-                    <div className="mt-3 text-sm text-neutral-600 dark:text-neutral-400">
+                    <div className="mt-3 text-sm text-neutral-600 dark:text-neutral-400 text-right">
                       {overallDiscountEnabled ? (
                         overallDiscountMode === "percent" ? (
                           <div>Aplicado: {overallDiscountValue}% — {formatCurrency(saleSummary.overallDiscount)}</div>
@@ -650,9 +664,7 @@ export default function SaleWizard({
         </main>
 
         {error && !success && (
-          <div className="mx-8 mb-3 rounded-2xl border border-red-400/40 bg-red-900/20 px-4 py-3 text-sm text-red-200">
-            {error}
-          </div>
+          <div className="mx-8 mb-3">{error}</div>
         )}
 
         {!success && (
@@ -728,6 +740,22 @@ export default function SaleWizard({
             items={itemsWithTotals}
             payments={paymentsState.enabledPayments}
           />
+        )}
+        {openCashboxWarning && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
+            <div className="w-full max-w-md rounded-3xl border border-yellow-300 bg-yellow-50 px-6 py-6 shadow-xl text-yellow-900 dark:border-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-200">
+              <h3 className="text-lg font-semibold">Caixa fechado</h3>
+              <p className="mt-2 text-sm">Não é possível efetuar venda sem caixa aberto. Abra o caixa antes de registrar vendas.</p>
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setOpenCashboxWarning(false)}
+                  className="rounded-full border border-yellow-700 px-4 py-2 text-sm font-semibold text-yellow-900 transition hover:bg-yellow-100"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -860,11 +888,11 @@ function ProductStep({ items, setItems, products, onOpenProductModal, showSummar
       <div className="overflow-hidden rounded-3xl border border-white/20">
         <table className="min-w-full divide-y divide-white/10 text-sm">
           <thead className="bg-neutral-100 text-xs uppercase tracking-[0.25em] text-neutral-500 dark:bg-white/5 dark:text-neutral-400">
-            <tr>
+              <tr>
               <th className="px-4 py-3 text-left">SKU</th>
               <th className="px-4 py-3 text-left">Produto</th>
               <th className="px-4 py-3 text-left">Unit.</th>
-              <th className="px-4 py-3 text-left">Estoque</th>
+              <th className="px-4 py-3 text-left">Qtd</th>
               <th className="px-4 py-3 text-left">Desc.</th>
               <th className="px-4 py-3 text-right">Subt.</th>
               <th className="px-4 py-3"></th>
@@ -887,7 +915,7 @@ function ProductStep({ items, setItems, products, onOpenProductModal, showSummar
                   <td className="px-4 py-3">{item.sku}</td>
                   <td className="px-4 py-3">{item.name}</td>
                   <td className="px-4 py-3">{formatCurrency(item.unitPrice)}</td>
-                  <td className="px-4 py-3">{Number.isFinite(item.maxQuantity) ? item.maxQuantity : '-'}</td>
+                  <td className="px-4 py-3">{Number.isFinite(Number(item.quantity)) ? Number(item.quantity) : '-'}</td>
                   <td className="px-4 py-3">
                     <div className="space-y-2">
                       <label className="flex items-center gap-2 text-xs text-neutral-400">
@@ -988,11 +1016,22 @@ function PaymentStep({
 }) {
   const togglePayment = (method) => {
     setPayments((current) =>
-      current.map((payment) =>
-        payment.method === method
-          ? { ...payment, enabled: !payment.enabled }
-          : payment
-      )
+      current.map((payment) => {
+        if (payment.method !== method) return payment;
+        const willEnable = !payment.enabled;
+        // If enabling fiado, prefill with the remaining diff so user doesn't need to type
+        if (payment.method === "fiado" && willEnable) {
+          const remaining = Math.max(0, paymentsState?.diff ?? 0);
+          const digits = digitsFromValue(remaining);
+          return {
+            ...payment,
+            enabled: true,
+            amount: formatFromDigits(digits, defaultLocale, defaultCurrency),
+            _digits: digits,
+          };
+        }
+        return { ...payment, enabled: !payment.enabled };
+      })
     );
   };
 
@@ -1063,8 +1102,8 @@ function PaymentStep({
   );
 }
 
-function SummaryTile({ label, value, emphasis, compact = false }) {
-  if (compact) {
+function SummaryTile({ label, value, emphasis, compact = false, stacked = false, wide = false }) {
+  if (compact && !stacked) {
     return (
       <div className={clsx("rounded-3xl border px-4 py-2 flex items-center justify-between", emphasis ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-200 bg-neutral-50 text-neutral-700")}>
         <span className={clsx("text-xs uppercase tracking-[0.25em]", emphasis ? "text-white/70" : "text-neutral-500")}>{label}</span>
@@ -1077,16 +1116,26 @@ function SummaryTile({ label, value, emphasis, compact = false }) {
     <div
       className={clsx(
         "rounded-3xl border px-5 py-4",
+        wide && "min-w-[220px]",
         emphasis
           ? "border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-black"
           : "border-neutral-200 bg-neutral-50 text-neutral-700 dark:border-white/20 dark:bg-surface-dark/40 dark:text-neutral-200"
       )}
     >
-      <p className={clsx(
-        "text-xs uppercase tracking-[0.25em]",
-        emphasis ? "text-white/70 dark:text-black/70" : "text-neutral-500 dark:text-neutral-500"
-      )}>{label}</p>
-      <p className="mt-2 text-lg font-semibold">{formatCurrency(value)}</p>
+      {stacked ? (
+        <div className="flex flex-col items-start">
+          <p className={clsx("text-xs uppercase tracking-[0.25em]", emphasis ? "text-white/70 dark:text-black/70" : "text-neutral-500 dark:text-neutral-500")}>{label}</p>
+          <p className="mt-1 text-lg font-semibold">{formatCurrency(value)}</p>
+        </div>
+      ) : (
+        <>
+          <p className={clsx(
+            "text-xs uppercase tracking-[0.25em]",
+            emphasis ? "text-white/70 dark:text-black/70" : "text-neutral-500 dark:text-neutral-500"
+          )}>{label}</p>
+          <p className="mt-2 text-lg font-semibold">{formatCurrency(value)}</p>
+        </>
+      )}
     </div>
   );
 }
@@ -1165,7 +1214,7 @@ function ProductPickerModal({ products, search, onSearchChange, onClose, onAdd }
                   <th className="px-4 py-3 text-left">SKU</th>
                   <th className="px-4 py-3 text-left">Produto</th>
                   <th className="px-4 py-3 text-left">Unit.</th>
-                  <th className="px-4 py-3 text-left">Qtd</th>
+                  <th className="px-4 py-3 text-left">Estoque</th>
                   <th className="px-4 py-3"></th>
                 </tr>
             </thead>
@@ -1186,25 +1235,10 @@ function ProductPickerModal({ products, search, onSearchChange, onClose, onAdd }
                     <td className="px-4 py-3">{product.sku}</td>
                     <td className="px-4 py-3">{product.name}</td>
                     <td className="px-4 py-3">{formatCurrency(product.sale_price)}</td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min="1"
-                        value={quantities[product.id] ?? 1}
-                        onChange={(e) => setQuantities((cur) => ({ ...cur, [product.id]: e.target.valueAsNumber || 1 }))}
-                        className="w-20 rounded-xl border border-neutral-300 px-2 py-1 text-sm"
-                      />
-                    </td>
+                    <td className="px-4 py-3">{Number.isFinite(stock) ? stock : '-'}</td>
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => {
-                          const q = quantities[product.id] ?? null;
-                          if (q && Number.isFinite(q) && q > 0) {
-                            handleAdd(product, q);
-                          } else {
-                            openQuantityModal(product);
-                          }
-                        }}
+                        onClick={() => openQuantityModal(product)}
                         className="inline-flex items-center gap-2 rounded-full border border-outline px-3 py-1 text-xs uppercase tracking-[0.25em] text-text-light dark:text-text-dark transition hover:-translate-y-0.5 hover:bg-white/5 dark:hover:bg-white/5"
                       >
                         Adicionar
@@ -1215,7 +1249,7 @@ function ProductPickerModal({ products, search, onSearchChange, onClose, onAdd }
               })}
               {filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-neutral-500">
+                  <td colSpan={6} className="px-4 py-6 text-center text-sm text-neutral-500">
                     Nenhum produto encontrado.
                   </td>
                 </tr>
@@ -1236,12 +1270,12 @@ function ProductPickerModal({ products, search, onSearchChange, onClose, onAdd }
                 onChange={(e) => setQuantityInput(e.target.valueAsNumber || 1)}
                 className="w-full rounded-xl border border-neutral-200 px-3 py-2 mb-3"
               />
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setQuantityModalOpen(false)} className="rounded-full border px-4 py-2">Cancelar</button>
-                <button onClick={confirmQuantity} className="rounded-full bg-neutral-900 text-white px-4 py-2">Adicionar</button>
-              </div>
-            </div>
+        <div className="flex justify-end gap-2">
+        <button onClick={() => setQuantityModalOpen(false)} className="rounded-full border px-4 py-2">Cancelar</button>
+        <button onClick={confirmQuantity} className="rounded-full bg-neutral-900 text-white px-4 py-2">Adicionar</button>
+      </div>
           </div>
+        </div>
         )}
         {/* Image preview modal */}
         {previewUrl && (
@@ -1272,13 +1306,13 @@ function ConfirmModal({ onConfirm, onCancel, submitting, saleSummary, customer, 
         <h3 className="text-lg font-semibold">Confirmar venda</h3>
         <p className="mt-1 text-sm text-neutral-400">Revise os dados antes de finalizar.</p>
 
-        <div className="mt-4 space-y-3 text-sm text-neutral-200">
+  <div className="mt-4 space-y-3 text-sm text-neutral-900 dark:text-neutral-200">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">Cliente</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-neutral-500 font-semibold">Cliente</p>
             <p>{customer?.name || "Cliente nao informado"}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">Itens</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-neutral-500 font-semibold">Itens</p>
             <ul className="mt-2 space-y-1">
               {items.map((item) => (
                 <li key={item.productId} className="flex justify-between">
@@ -1291,7 +1325,7 @@ function ConfirmModal({ onConfirm, onCancel, submitting, saleSummary, customer, 
             </ul>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-neutral-500">Pagamentos</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-neutral-500 font-semibold">Pagamentos</p>
             <ul className="mt-2 space-y-1">
               {payments.map((payment) => (
                 <li key={payment.method} className="flex justify-between">

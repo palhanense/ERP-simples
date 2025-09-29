@@ -30,8 +30,9 @@ def _get_pwd_context():
         raise RuntimeError(
             "passlib is required for password hashing. Install dev requirements: `python -m pip install -r erp-backend/requirements.txt`"
         ) from exc
-    # Use pbkdf2_sha256 to avoid requiring the native bcrypt dependency in dev containers.
-    _pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+    # Prefer Argon2 for production-grade hashing but keep pbkdf2_sha256 as fallback.
+    # Argon2 is provided by argon2-cffi (ensure it's installed).
+    _pwd_context = CryptContext(schemes=["argon2", "pbkdf2_sha256"], deprecated="auto")
     return _pwd_context
 
 
@@ -43,6 +44,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     ctx = _get_pwd_context()
     return ctx.hash(password)
+
+
+def needs_rehash(hashed_password: str) -> bool:
+    ctx = _get_pwd_context()
+    try:
+        return ctx.needs_update(hashed_password)
+    except Exception:
+        return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

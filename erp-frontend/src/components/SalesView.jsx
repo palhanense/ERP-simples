@@ -73,7 +73,6 @@ export default function SalesView({ sales, onCancel, loading }) {
     <section className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Vendas</h2>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             Controle de vendas com divisao de pagamentos e fiado.
           </p>

@@ -1,8 +1,9 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { ArrowPathIcon, MoonIcon, SunIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, MoonIcon, SunIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
 import { clsx } from "clsx";
 
 import NavigationTabs from "./components/NavigationTabs";
+import SettingsModal from "./components/SettingsModal";
 import Login from "./components/Login";
 import { useAuth } from './contexts/AuthContext';
 import { CashboxProvider } from "./contexts/CashboxContext";
@@ -58,11 +59,12 @@ export default function App() {
   // start on Home by default
   const [activeView, setActiveView] = useState("home");
   const [isDark, setIsDark] = useThemePreference();
-  const [storeName] = useState(() => {
+  const [storeName, setStoreName] = useState(() => {
     if (typeof window === 'undefined') return '';
     // prefer client-specific name; allow empty fallback
     return window.localStorage.getItem('erp-client-name') || window.localStorage.getItem('erp-store-name') || '';
   });
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -129,6 +131,8 @@ export default function App() {
         supplier: values.supplier?.trim() ? values.supplier.trim() : null,
         sku: values.sku.trim(),
         category: values.category?.trim() || "",
+        // include initial stock when creating a product
+        stock: Number(values.stock || 0),
         cost_price: Number(values.cost_price || 0),
         sale_price: Number(values.sale_price || 0),
         min_stock: Number(values.min_stock || 0),
@@ -157,6 +161,8 @@ export default function App() {
         supplier: values.supplier?.trim() ? values.supplier.trim() : null,
         sku: values.sku?.trim(),
         category: values.category?.trim() || "",
+        // send stock when user edited it (allow undefined to mean no-change)
+        ...(values.stock !== undefined ? { stock: Number(values.stock) } : {}),
         cost_price: Number(values.cost_price || 0),
         sale_price: Number(values.sale_price || 0),
         min_stock: Number(values.min_stock || 0),
@@ -221,16 +227,19 @@ export default function App() {
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-6 lg:px-10 xl:px-16">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* left spacer / brand area (removed) */}
+            {/* Navigation moved left to sit near brand area */}
+            <NavigationTabs
+              navigation={navigation}
+              activeView={activeView}
+              onChange={setActiveView}
+            />
           </div>
           <div className="ml-6 flex-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-neutral-400 dark:text-neutral-500">Nome do cliente</p>
-                <h2 className="text-2xl font-extrabold text-text-light dark:text-text-dark">{storeName || '(Sem nome)'}</h2>
+                {/* Header client title intentionally removed per request. Store name kept in state for future use. */}
               </div>
 
-              {/* single theme selector placed to the right of the client name, above the menu */}
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -243,14 +252,27 @@ export default function App() {
                 </button>
               </div>
             </div>
-
-            <NavigationTabs
-              navigation={navigation}
-              activeView={activeView}
-              onChange={setActiveView}
-            />
           </div>
         </header>
+
+        {/* Gear icon for settings: opens SettingsModal */}
+        <button
+          type="button"
+          aria-label="Abrir configurações"
+          className="fixed left-4 top-4 z-50 inline-flex items-center justify-center rounded-full border border-outline/20 bg-white/80 p-2 shadow-md dark:bg-surface-dark/80"
+          onClick={() => setSettingsOpen(true)}
+        >
+          <Cog6ToothIcon className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
+        </button>
+
+        <SettingsModal
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          isDark={isDark}
+          setIsDark={setIsDark}
+          storeName={storeName}
+          setStoreName={setStoreName}
+        />
 
         {error && (
           <div className="mt-10 rounded-3xl border border-red-300 bg-red-50 px-6 py-4 text-sm text-red-600 dark:border-red-400/40 dark:bg-red-900/20 dark:text-red-200">

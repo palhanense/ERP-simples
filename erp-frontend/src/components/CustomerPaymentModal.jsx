@@ -100,7 +100,7 @@ export default function CustomerPaymentModal({ customers = [], onClose, onSaved 
             onChange={(e) => { setQuery(e.target.value); setSelectedCustomer(null); setSuggestionIndex(-1); }}
             onKeyDown={handleInputKeyDown}
             className="mt-1 w-full rounded-lg border px-3 py-2"
-            placeholder="Digite o nome do cliente..."
+            placeholder="Pesquisar cliente..."
           />
           {suggestions.length > 0 && ( !selectedCustomer || (selectedCustomer && (selectedCustomer.name || '') !== query) ) && (
             <ul className="mt-2 max-h-40 overflow-auto rounded-md border bg-white">

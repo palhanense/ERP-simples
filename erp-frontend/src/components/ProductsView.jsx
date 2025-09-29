@@ -1,9 +1,8 @@
 ﻿import { clsx } from "clsx";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { useState, useEffect, useMemo } from "react";
-import Calendar from "./Calendar";
-import DateRange from "./DateRange";
-import { fetchProductsReport } from "../lib/api";
+// Calendar/DateRange removed from ProductsView: using native PeriodPicker inputs instead
+import { fetchProductsReport, fetchCategories } from "../lib/api";
 import { resolveMediaUrl } from "../lib/api";
 import ProductCreateModal from "./ProductCreateModal";
 import { formatDate } from "../lib/dateFormat";
@@ -13,30 +12,26 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
   const [showModal, setShowModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState("");
-  // período padrão: do primeiro dia do mês atual até hoje
-  const formatPad = (n) => n.toString().padStart(2, "0");
-  const todayString = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${formatPad(now.getMonth() + 1)}-${formatPad(now.getDate())}`;
-  };
-  const firstOfMonthString = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${formatPad(now.getMonth() + 1)}-01`;
-  };
-
-  const [fromDate, setFromDate] = useState(() => firstOfMonthString());
-  const [toDate, setToDate] = useState(() => todayString());
+  // período de filtros removido da tela Produtos (nenhum calendário ou inputs de período nesta view)
+  const [skuFilter, setSkuFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [nameFilter, setNameFilter] = useState("");
   const [filtered, setFiltered] = useState(products || []);
   const [serverTotals, setServerTotals] = useState(null);
   const [localLoading, setLocalLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleEdit = (product) => {
+    try {
+      console.debug('ProductsView: handleEdit called for product', product?.id);
+    } catch (e) {}
     setEditingProduct(product);
     setShowModal(true);
   };
 
   const handleCloseModal = () => {
+    try { console.debug('ProductsView: handleCloseModal called'); } catch (e) {}
     setEditingProduct(null);
     setShowModal(false);
   };
@@ -50,26 +45,7 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
     setShowModal(false);
   };
 
-  // pequeno seletor de período usando inputs nativos (padrão usado em outras telas)
-  function PeriodPicker({ fromDate, toDate, onChange }) {
-    return (
-      <div className="flex items-center gap-2">
-        <input
-          type="date"
-          value={fromDate || ""}
-          onChange={(e) => onChange(e.target.value, toDate)}
-          className="rounded-xl border border-neutral-300 px-3 py-1 text-sm"
-        />
-        <span className="text-sm text-neutral-400">—</span>
-        <input
-          type="date"
-          value={toDate || ""}
-          onChange={(e) => onChange(fromDate, e.target.value)}
-          className="rounded-xl border border-neutral-300 px-3 py-1 text-sm"
-        />
-      </div>
-    );
-  }
+  // Period picker removed from this view
   // O componente de resumo suporta dois formatos: 'currency' (padrão) ou 'number'
   function SummaryChip({ label, value, format = "currency" }) {
     let display;
@@ -111,17 +87,37 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
   }
 
   useEffect(() => {
-    // garante que toDate não seja anterior a fromDate
-    if (fromDate && toDate && toDate < fromDate) {
-      setToDate(fromDate);
-      return;
-    }
-    // busca relatório no backend com os filtros
+    // load categories for the select dropdown
+    (async () => {
+      try {
+        const cats = await fetchCategories();
+        if (cats && cats.length) {
+          setCategories(cats || []);
+        } else {
+          // derive categories from provided products prop as a fallback
+          try {
+            const uniq = Array.from(new Set((products || []).map((p) => (p.category || '').trim()).filter(Boolean))).map((name) => ({ id: name, name }));
+            setCategories(uniq);
+          } catch (e) {
+            setCategories([]);
+          }
+        }
+      } catch (e) {
+        // ignore - categories are optional
+      }
+    })();
+
+    // busca relatório no backend com os filtros (sem filtro por período nesta view)
     (async () => {
       setLocalLoading(true);
       setError("");
       try {
-        const report = await fetchProductsReport({ from_date: fromDate || undefined, to_date: toDate || undefined, limit: 500 });
+        const report = await fetchProductsReport({
+          sku: skuFilter || undefined,
+          name: nameFilter || undefined,
+          category: categoryFilter || undefined,
+          limit: 500,
+        });
         setFiltered(report.products || []);
         setServerTotals(report.totals || { total_products: 0, total_cost: 0, total_sale: 0 });
       } catch (err) {
@@ -130,7 +126,7 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
         setLocalLoading(false);
       }
     })();
-  }, [products, fromDate, toDate]);
+  }, [products, skuFilter, nameFilter, categoryFilter]);
 
   // calcula totais locais a partir dos produtos filtrados: quantidade, custo total (cost_price * estoque), venda total (sale_price * estoque)
   const localTotals = useMemo(() => {
@@ -171,28 +167,24 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
     <section className="space-y-6">
       <header className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">Produtos</h2>
-          <button
-            type="button"
-            onClick={onCreate}
-            className="inline-flex items-center gap-2 rounded-full border border-outline px-5 py-2 text-sm font-medium transition hover:-translate-y-0.5 hover:border-outline/80 dark:border-white/10 dark:hover:border-white/30"
-          >
-            <PlusIcon className="h-4 w-4" /> Cadastrar produto
-          </button>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Mostrar totais sempre (antes eram ocultos em telas pequenas) */}
           <div className="flex items-center gap-3">
             <SummaryChip label="Ítens totais" value={totalProductsNum} format="number" />
-            {/* totais retornados pelo servidor (ou calculados localmente) */}
             <SummaryChip label="Valor de custo" value={totalCostNum} />
             <SummaryChip label="Valor de venda" value={totalSaleNum} />
           </div>
-          <div className="ml-auto flex items-center gap-3">
-            <DateRange from={fromDate} to={toDate} onChange={(v) => { if (v.from) setFromDate(v.from); if (v.to) setToDate(v.to); }} />
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onCreate}
+              className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium transition hover:-translate-y-0.5 bg-black text-white border border-transparent hover:bg-black/90 dark:bg-white dark:text-black dark:border-white/10 dark:hover:border-white/30"
+            >
+              <PlusIcon className="h-4 w-4" /> Cadastrar produto
+            </button>
           </div>
         </div>
       </header>
+
+      {/* filtros alinhados: inputs serão exibidos numa segunda linha de cabeçalho dentro da tabela */}
       
       <div
         className={clsx(
@@ -215,9 +207,9 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
       <col style={{ width: '12%' }} />
     </colgroup>
     <thead>
-      <tr className="text-left text-xs uppercase tracking-[0.25em] text-neutral-400 dark:text-neutral-500">
+    <tr className="text-left text-xs uppercase tracking-[0.25em] text-neutral-400 dark:text-neutral-500">
   <th className="w-[72px] align-middle text-center">Foto</th>
-    <th className="w-[10%] border-l border-outline/20 text-center">SKU</th>
+      <th className="w-[10%] border-l border-outline/20 text-center">SKU</th>
     <th className="w-[34%] border-l border-outline/20 text-left">Produto</th>
   <th className="w-[12%] border-l border-outline/20 text-center"><div className="leading-tight text-center">cate<br/>goria</div></th>
   <th className="w-[8%] border-l border-outline/20 text-center"><div className="leading-tight text-center">Preço<br/>venda</div></th>
@@ -225,6 +217,47 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
   <th className="w-[6%] border-l border-outline/20 text-center"><div className="leading-tight text-center">Mar<br/>gem</div></th>
   <th className="w-[6%] border-l border-outline/20 text-center"><div className="leading-tight text-center">esto<br/>que</div></th>
   <th className="w-[12%] border-l border-outline/20 text-center"><div className="leading-tight text-center">Última<br/>venda</div></th>
+      </tr>
+      <tr className="text-sm">
+        <th />
+        <th className="border-l border-outline/20 px-2 py-2 text-center">
+          <input
+            type="text"
+            placeholder="Filtrar SKU"
+            value={skuFilter}
+            onChange={(e) => setSkuFilter(e.target.value)}
+            className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-sm font-normal"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </th>
+        <th className="border-l border-outline/20 px-3 py-2">
+          <input
+            type="text"
+            placeholder="Filtrar produto"
+            value={nameFilter}
+            onChange={(e) => setNameFilter(e.target.value)}
+            className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-sm font-normal"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </th>
+        <th className="border-l border-outline/20 px-2 py-2 text-center">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-sm bg-white font-normal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <option value="">Todas</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.name}>{c.name}</option>
+            ))}
+          </select>
+        </th>
+        <th className="border-l border-outline/20" />
+        <th className="border-l border-outline/20" />
+        <th className="border-l border-outline/20" />
+        <th className="border-l border-outline/20" />
+        <th className="border-l border-outline/20" />
       </tr>
     </thead>
     <tbody className="text-sm">
@@ -291,6 +324,7 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
       })}
     </tbody>
   </table>
+  
         {filtered.length === 0 && !loading && !localLoading && (
           <p className="mt-4 text-sm text-neutral-500 dark:text-neutral-400">
             Nenhum produto cadastrado ate o momento.
@@ -300,7 +334,9 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
           <p className="mt-4 text-sm text-neutral-500 dark:text-neutral-400">Carregando produtos...</p>
         )}
         {showModal && (
-          <ProductCreateModal
+          <>
+            {(() => { try { console.debug('ProductsView: rendering ProductCreateModal, showModal=', showModal, 'editingProductId=', editingProduct?.id); } catch (e) {} return null; })()}
+            <ProductCreateModal
             onClose={handleCloseModal}
             onSubmit={async (data) => {
               setModalLoading(true);
@@ -321,6 +357,7 @@ export default function ProductsView({ products, loading, onCreate = () => {}, o
             initialData={editingProduct}
             onProductSaved={handleProductSaved}
           />
+          </>
         )}
       </div>
       </div>

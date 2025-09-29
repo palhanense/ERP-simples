@@ -21,7 +21,6 @@ export default function CustomersView({ customers, loading, onCreate }) {
     <section className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Clientes</h2>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             Consulta rapida dos clientes cadastrados no ERP.
           </p>
@@ -44,7 +43,7 @@ export default function CustomersView({ customers, loading, onCreate }) {
               type="text"
               value={nameQuery}
               onChange={(e) => setNameQuery(e.target.value)}
-              placeholder="Nome do cliente"
+              placeholder="Pesquisar"
               className="mt-1 w-full rounded-lg border px-3 py-2"
             />
           </div>

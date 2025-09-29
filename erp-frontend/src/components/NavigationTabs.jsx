@@ -3,7 +3,7 @@ import { clsx } from "clsx";
 export default function NavigationTabs({ navigation, activeView, onChange }) {
   return (
     // single-line navigation: do not wrap; allow horizontal scrolling on very small screens
-    <nav className="mt-4 flex gap-3 overflow-x-auto whitespace-nowrap">
+    <nav className="flex gap-3 overflow-x-auto whitespace-nowrap">
       {navigation.map((item) => (
         <button
           key={item.id}
