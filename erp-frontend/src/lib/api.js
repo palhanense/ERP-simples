@@ -120,6 +120,104 @@ export function fetchSales() {
   return request("/sales");
 }
 
+// --- Reports API (calls the separate reports service endpoints)
+export function fetchReportMeta(entity) {
+  // Dev-mode mock: when running in Vite dev, return stubbed metadata if the real endpoint is not available
+  if (import.meta.env?.DEV) {
+    // provide richer entity-specific metadata and prebuilt templates for faster UX testing
+    const commonFields = [
+      { name: 'date', label: 'Data', type: 'date' },
+      { name: 'store', label: 'Loja' },
+      { name: 'customer_name', label: 'Cliente' },
+      { name: 'total', label: 'Total', type: 'number' },
+      { name: 'paid', label: 'Pago', type: 'number' },
+    ];
+
+    if (entity === 'produto' || entity === 'produto') {
+      // product-focused templates: ABC curve, CMV, Contribution Margin
+      return Promise.resolve({
+        fields: [
+          { name: 'sku', label: 'SKU' },
+          { name: 'name', label: 'Nome do Produto' },
+          { name: 'category', label: 'Categoria' },
+          { name: 'sold_qty', label: 'Quantidade Vendida', type: 'number' },
+          { name: 'revenue', label: 'Receita', type: 'number' },
+          { name: 'cost', label: 'Custo', type: 'number' },
+          { name: 'margin', label: 'Margem', type: 'number' },
+        ],
+        default_columns: ['sku', 'name', 'sold_qty', 'revenue', 'cost', 'margin'],
+        templates: [
+          {
+            id: 'abc_curve',
+            label: 'Curva ABC (Produtos)',
+            description: 'Classifica produtos por receita acumulada para identificar A/B/C',
+            columns: ['sku', 'name', 'sold_qty', 'revenue'],
+            group_by: null,
+            aggregate: { func: 'sum', field: 'revenue' },
+            filters: [],
+            autoRun: false,
+          },
+          {
+            id: 'cmv',
+            label: 'CMV (Custo das Mercadorias Vendidas)',
+            description: 'Mostra custo e receita por produto e calcula CMV',
+            columns: ['sku', 'name', 'revenue', 'cost'],
+            aggregate: { func: 'sum', field: 'cost' },
+            filters: [],
+            autoRun: false,
+          },
+          {
+            id: 'contribution_margin',
+            label: 'Margem de Contribuição',
+            description: 'Receita menos custo variável por produto',
+            columns: ['sku', 'name', 'revenue', 'cost', 'margin'],
+            aggregate: { func: 'sum', field: 'margin' },
+            filters: [],
+            autoRun: false,
+          },
+        ],
+        chartHints: { defaultChart: 'bar', xField: 'name', yField: 'revenue' },
+      });
+    }
+
+    // fallback generic metadata
+    return Promise.resolve({
+      fields: commonFields,
+      default_columns: ['date', 'customer_name', 'total'],
+      templates: [
+        { id: 'top10', label: 'Top 10 Produtos', columns: ['date', 'customer_name', 'total'] },
+      ],
+      chartHints: { defaultChart: 'line', xField: 'date', yField: 'total' },
+    });
+  }
+  return request(`/reports/meta/${entity}`);
+}
+
+export function executeReport(payload, opts = {}) {
+  // opts.timeout override if needed
+  if (import.meta.env?.DEV) {
+    // simple mock: return rows based on requested columns
+    const cols = payload.columns || ['date', 'customer_name', 'total'];
+    const rows = [];
+    for (let i = 0; i < Math.min(payload.limit || 30, 30); i++) {
+      const date = new Date(Date.now() - (30 - i) * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      const row = cols.map((c) => {
+        if (c === 'date') return date;
+        if (c === 'total') return (Math.random() * 500).toFixed(2);
+        return `${c}_val_${i}`;
+      });
+      rows.push(row);
+    }
+    return Promise.resolve({ columns: cols.map(c => ({ name: c, label: c })), rows });
+  }
+
+  return request(`/reports/execute`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    timeout: opts.timeout || 20000,
+  });
+}
+
 
 export function fetchFinancialEntries() {
   return request("/financial-entries");

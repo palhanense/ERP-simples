@@ -27,7 +27,11 @@ services:
       - ./erp-backend/data:/app/data:rw
     ports:
       - "8000:8000"
-    command: ["/app/docker-entrypoint.sh"]
+    # Run the entrypoint via bash to avoid exec/CRLF problems when the
+    # host directory is bind-mounted into the container on Windows.
+    # Bash will read the file even if the executable bit isn't preserved
+    # by the Windows filesystem.
+    command: ["/bin/bash", "/app/docker-entrypoint.sh"]
 
   frontend:
     build:

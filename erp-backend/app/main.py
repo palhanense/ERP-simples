@@ -28,6 +28,8 @@ app.add_middleware(
     allow_origins=[
         "http://127.0.0.1:5173",
         "http://localhost:5173",
+        "http://127.0.0.1:5174",
+        "http://localhost:5174",
         "http://0.0.0.0:5173",
         "http://backend:8000",
     ],
@@ -228,7 +230,11 @@ def read_current_user(authorization: str | None = Header(None), db: Session = De
         scheme, token = authorization.split()
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid authorization header")
-    payload = decode_access_token(token)
+    try:
+        payload = decode_access_token(token)
+    except Exception:
+        # Decode errors (expired/invalid token) should be translated to 401
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
     try:
         user_id = int(payload.get("sub"))
     except Exception:
