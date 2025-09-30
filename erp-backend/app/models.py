@@ -23,6 +23,34 @@ class Tenant(Base):
     )
 
 
+class RegistrationStatus(str, Enum):
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    DONE = "DONE"
+    FAILED = "FAILED"
+
+
+class Registration(Base):
+    __tablename__ = "registrations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    store_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    birth_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cpf: Mapped[str] = mapped_column(String(20), nullable=False)
+    phone: Mapped[str] = mapped_column(String(50), nullable=False)
+    address: Mapped[dict] = mapped_column(JSON, nullable=False)
+    cnpj: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    status: Mapped[RegistrationStatus] = mapped_column(SqlEnum(RegistrationStatus, native_enum=False), nullable=False, default=RegistrationStatus.PENDING)
+    idempotency_key: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True)
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey('tenants.id'), nullable=True)
+    tenant_slug: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class UserRole(str, Enum):
     ADMIN = "admin"
     MANAGER = "manager"

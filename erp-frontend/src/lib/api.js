@@ -301,3 +301,19 @@ export function fetchCurrentUser() {
   return request('/auth/me');
 }
 
+export function signup(email, password) {
+  const payload = { email, password };
+  return request('/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createRegistration(payload) {
+  return request('/registrations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    timeout: 30000,
+  });
+}
+

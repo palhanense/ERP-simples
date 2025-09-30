@@ -5,7 +5,8 @@ from decimal import Decimal
 from enum import Enum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_serializer, field_validator
+import re
 
 
 class ProductBase(BaseModel):
@@ -43,6 +44,7 @@ class ProductUpdate(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    tenant: Tenant | None = None
 
 
 class TokenData(BaseModel):
@@ -67,6 +69,68 @@ class Tenant(BaseModel):
     name: str
     slug: str
     created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RegistrationCreate(BaseModel):
+    email: str
+    store_name: Optional[str] = None
+    full_name: str
+    birth_date: Optional[datetime] = None
+    cpf: str
+    phone: str
+    address: dict
+    cnpj: Optional[str] = None
+    idempotency_key: Optional[str] = None
+
+    @field_validator('cpf')
+    def cpf_valid(cls, v: str) -> str:
+        # normalize
+        s = re.sub(r"\D", "", v or "")
+        if len(s) != 11:
+            raise ValueError('CPF inválido')
+        # reject sequences like 00000000000
+        if s == s[0] * 11:
+            raise ValueError('CPF inválido')
+
+        digits = [int(ch) for ch in s]
+
+        def calc(arr, length):
+            soma = 0
+            for i in range(length):
+                soma += arr[i] * (length + 1 - i)
+            r = soma % 11
+            return 0 if r < 2 else 11 - r
+
+        v1 = calc(digits, 9)
+        v2 = calc(digits[:9] + [v1], 10)
+        if v1 != digits[9] or v2 != digits[10]:
+            raise ValueError('CPF inválido')
+        return s
+
+    @field_validator('store_name')
+    def store_name_len(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            return None
+        if len(v) > 255:
+            raise ValueError('Nome da loja muito longo')
+        return v
+
+
+class RegistrationOut(BaseModel):
+    id: int
+    email: str
+    full_name: str
+    status: str
+    tenant_slug: Optional[str] = None
+    tenant_id: Optional[int] = None
+    error: Optional[str] = None
+    created_at: datetime
+    processed_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -159,6 +223,8 @@ class SaleItemCreate(SaleItemBase):
 class SaleItem(SaleItemBase):
     id: int
     line_total: Decimal
+    # include nested product when serializing a SaleItem (backend loads relationship)
+    product: Optional[Product] = None
 
     model_config = ConfigDict(from_attributes=True)
 

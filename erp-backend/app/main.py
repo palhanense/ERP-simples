@@ -16,7 +16,7 @@ from app.services.image_processing import (
     ImageProcessingError,
     convert_many_to_webp,
 )
-from app.auth import verify_password, create_token_for_user, decode_access_token, get_password_hash, needs_rehash
+from app.auth import verify_password, create_token_for_user, decode_access_token, get_password_hash
 from sqlalchemy.orm import Session
 from fastapi import Depends, Header
 
@@ -99,21 +99,70 @@ def login_for_access_token(form_data: dict, db: Session = Depends(get_db)):
     user = crud.get_user_by_email(db, username)
     if not user or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    # If the hash parameters changed (e.g. moved to Argon2), re-hash on successful login
-    try:
-        if needs_rehash(user.password_hash):
-            new_hash = get_password_hash(password)
-            try:
-                crud.update_user_password(db, user, new_hash)
-            except Exception:
-                # non-fatal: continue without failing login if rehash/update fails
-                pass
-    except Exception:
-        # ignore rehash check failures
-        pass
+    # no rehash on login; password hashing remains handled at creation/time of change
 
     token = create_token_for_user(user)
     return {"access_token": token, "token_type": "bearer"}
+
+
+@app.post('/auth/signup', response_model=schemas.Token, status_code=status.HTTP_201_CREATED)
+def signup_endpoint(payload: dict, db: Session = Depends(get_db)):
+    # payload expected to contain 'email' and 'password'
+    email = payload.get('email')
+    password = payload.get('password')
+    if not email or not password:
+        raise HTTPException(status_code=400, detail='email and password required')
+    # Create an isolated tenant for this user so accounts don't share the same DB tenant data.
+    # If the caller provides tenant_name/tenant_slug, we could use it; otherwise generate one.
+    import re
+    import uuid
+
+    def _slugify(s: str) -> str:
+        s = s.lower()
+        s = re.sub(r"[^a-z0-9]+", "-", s)
+        s = s.strip("-")
+        return s or uuid.uuid4().hex[:6]
+
+    tenant_name = payload.get('tenant_name') or f"{email.split('@')[0]}'s tenant"
+    provided_slug = payload.get('tenant_slug')
+    if provided_slug:
+        tenant_slug = _slugify(provided_slug)
+    else:
+        # use local part + short random suffix to avoid collisions
+        local = email.split('@')[0]
+        base = _slugify(local)[:30]
+        tenant_slug = f"{base}-{uuid.uuid4().hex[:6]}"
+
+    # create tenant
+    try:
+        tenant = crud.create_tenant(db, name=tenant_name, slug=tenant_slug)
+    except IntegrityError:
+        db.rollback()
+        # unlikely but if slug already exists, generate a different one
+        tenant_slug = f"{tenant_slug}-{uuid.uuid4().hex[:4]}"
+        tenant = crud.create_tenant(db, name=tenant_name, slug=tenant_slug)
+
+    pwd_hash = get_password_hash(password)
+    try:
+        # create the new user as USER by default
+        user = crud.create_user(db, email=email, password_hash=pwd_hash, tenant_id=tenant.id, full_name=None, role=crud.models.UserRole.USER)
+    except ValueError as exc:
+        # cleanup orphan tenant if user cannot be created
+        try:
+            crud.delete_tenant(db, tenant)
+        except Exception:
+            pass
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        try:
+            crud.delete_tenant(db, tenant)
+        except Exception:
+            pass
+        raise HTTPException(status_code=409, detail='User creation conflict') from exc
+
+    token = create_token_for_user(user)
+    return {"access_token": token, "token_type": "bearer", "tenant": {"id": tenant.id, "name": tenant.name, "slug": tenant.slug, "created_at": tenant.created_at.isoformat()}}
 
 
 # Admin endpoints for tenant/user creation (dev)
@@ -151,6 +200,26 @@ def create_user_endpoint(user_in: schemas.UserCreate, db: Session = Depends(get_
     return u
 
 
+# Registration endpoints (public)
+@app.post('/registrations', response_model=schemas.RegistrationOut, status_code=status.HTTP_201_CREATED)
+def create_registration_endpoint(payload: dict, db: Session = Depends(get_db)):
+    # minimal validation done in frontend; here we persist registration and return id/status
+    idemp = payload.get('idempotency_key')
+    try:
+        reg = crud.create_registration(db, payload)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return reg
+
+
+@app.get('/registrations/{reg_id}', response_model=schemas.RegistrationOut)
+def get_registration_endpoint(reg_id: int, db: Session = Depends(get_db)):
+    reg = crud.get_registration(db, reg_id)
+    if not reg:
+        raise HTTPException(status_code=404, detail='Registration not found')
+    return reg
+
+
 @app.get("/auth/me")
 def read_current_user(authorization: str | None = Header(None), db: Session = Depends(get_db)):
     if not authorization:
@@ -168,6 +237,28 @@ def read_current_user(authorization: str | None = Header(None), db: Session = De
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+@app.get('/auth/tenant')
+def read_current_tenant(authorization: str | None = Header(None), db: Session = Depends(get_db)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail='Missing authorization header')
+    try:
+        scheme, token = authorization.split()
+    except Exception:
+        raise HTTPException(status_code=401, detail='Invalid authorization header')
+    payload = decode_access_token(token)
+    try:
+        user_id = int(payload.get('sub'))
+    except Exception:
+        raise HTTPException(status_code=401, detail='Invalid token payload')
+    user = crud.get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    tenant = user.tenant
+    if not tenant:
+        raise HTTPException(status_code=404, detail='Tenant not found')
+    return {"id": tenant.id, "name": tenant.name, "slug": tenant.slug, "created_at": tenant.created_at.isoformat()}
 
 
 @app.get("/products/{product_id}", response_model=schemas.Product)

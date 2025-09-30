@@ -30,9 +30,8 @@ def _get_pwd_context():
         raise RuntimeError(
             "passlib is required for password hashing. Install dev requirements: `python -m pip install -r erp-backend/requirements.txt`"
         ) from exc
-    # Prefer Argon2 for production-grade hashing but keep pbkdf2_sha256 as fallback.
-    # Argon2 is provided by argon2-cffi (ensure it's installed).
-    _pwd_context = CryptContext(schemes=["argon2", "pbkdf2_sha256"], deprecated="auto")
+    # Use pbkdf2_sha256 for development by default (keeps compatibility across environments).
+    _pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
     return _pwd_context
 
 

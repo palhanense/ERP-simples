@@ -225,11 +225,58 @@ def create_tenant(db: Session, name: str, slug: str) -> models.Tenant:
     return t
 
 
+def get_tenant_by_slug(db: Session, slug: str) -> models.Tenant | None:
+    return db.query(models.Tenant).filter(models.Tenant.slug == slug).first()
+
+
+def delete_tenant(db: Session, tenant: models.Tenant) -> None:
+    # Delete tenant and cascade will remove references if DB cascade configured; otherwise perform simple delete.
+    try:
+        db.delete(tenant)
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
+def create_registration(db: Session, registration_in: dict) -> models.Registration:
+    # registration_in expected to contain keys matching columns
+    idemp = registration_in.get('idempotency_key')
+    if idemp:
+        existing = db.query(models.Registration).filter(models.Registration.idempotency_key == idemp).first()
+        if existing:
+            return existing
+
+    reg = models.Registration(
+        email=registration_in.get('email'),
+        store_name=registration_in.get('store_name'),
+        full_name=registration_in.get('full_name'),
+        birth_date=registration_in.get('birth_date'),
+        cpf=registration_in.get('cpf'),
+        phone=registration_in.get('phone'),
+        address=registration_in.get('address') or {},
+        cnpj=registration_in.get('cnpj'),
+        status=models.RegistrationStatus.PENDING,
+        idempotency_key=idemp,
+    )
+    db.add(reg)
+    db.commit()
+    db.refresh(reg)
+    return reg
+
+
+def get_registration(db: Session, reg_id: int) -> models.Registration | None:
+    return db.get(models.Registration, reg_id)
+
+
 def create_user(db: Session, email: str, password_hash: str, tenant_id: int, full_name: str | None = None, role: models.UserRole = models.UserRole.USER) -> models.User:
     # Ensure global email uniqueness (Option B)
     existing = db.query(models.User).filter(models.User.email == email).first()
     if existing:
         raise ValueError("Email already registered")
+    # Ensure tenant has at most one user (Menju policy: one user per store)
+    existing_in_tenant = db.query(models.User).filter(models.User.tenant_id == tenant_id).first()
+    if existing_in_tenant:
+        raise ValueError("Tenant already has a user")
     u = models.User(email=email, password_hash=password_hash, tenant_id=tenant_id, full_name=full_name, role=role)
     db.add(u)
     try:
@@ -249,13 +296,6 @@ def get_user_by_email(db: Session, email: str) -> models.User | None:
 def get_user(db: Session, user_id: int) -> models.User | None:
     return db.query(models.User).filter(models.User.id == user_id).first()
 
-
-def update_user_password(db: Session, db_user: models.User, new_password_hash: str) -> models.User:
-    db_user.password_hash = new_password_hash
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
 
 
 def get_product(db: Session, product_id: int) -> Optional[models.Product]:
